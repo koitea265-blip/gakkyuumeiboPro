@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>学級名簿 Pro</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+  @media print { 
+    @page { size: A4 portrait; margin: 15mm 10mm 15mm 20mm; } 
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: white !important; } 
+    .print\:hidden { display: none !important; }
+  } 
+  .animate-fade-in { animation: fade-in 0.3s ease-out forwards; } 
+  @keyframes fade-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  .cell-border { border: 1px solid #000 !important; }
+  .thick-right { border-right: 2.5px solid #000 !important; }
+  .thick-left { border-left: 2.5px solid #000 !important; }
+  tbody tr { height: 1px; } 
+  .justify-style {
+    text-align: justify;
+    text-align-last: justify;
+    text-justify: inter-character;
+    white-space: nowrap;
+  }
+  ::-webkit-scrollbar { width: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 20px; border: 3px solid #f0f4f9; }
+  ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+  .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+</style>
+</head>
+<body class="flex h-screen bg-[#eaeff5] font-sans text-slate-800 overflow-hidden font-bold">
+  
+  <!-- Toast -->
+  <div id="toast" class="hidden fixed top-8 right-8 bg-slate-900 text-white px-8 py-4 rounded-2xl shadow-2xl z-[150] animate-fade-in text-sm border border-white/10 flex items-center gap-3 font-black">
+    <i data-lucide="check-circle-2" class="text-emerald-400 w-5 h-5"></i>
+    <span id="toast-msg"></span>
+  </div>
+
+  <!-- Sidebar -->
+  <aside class="w-80 bg-slate-900 flex flex-col shrink-0 print:hidden shadow-2xl z-50">
+    <div class="p-8">
+      <div class="flex items-center gap-3 mb-1 font-black text-white">
+        <div class="bg-blue-600 p-2 rounded-xl"><i data-lucide="database" class="w-6 h-6"></i></div>
+        <h1 class="text-2xl font-black tracking-tighter">学級名簿 Pro</h1>
+      </div>
+    </div>
+    <nav class="flex-1 overflow-y-auto px-4 space-y-2 font-black text-slate-400" id="nav-tabs">
+      <!-- Tabs rendered via JS -->
+    </nav>
+    <div class="p-4 border-t border-white/5 text-xs text-slate-500 font-bold text-center">
+      ©2026　学級名簿Pro　ＩＣＴ支援の杜
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="flex-1 overflow-y-auto flex flex-col bg-[#f0f4f9] font-bold relative">
+    <!-- Topbar -->
+    <div id="topbar" class="sticky top-0 bg-white/80 backdrop-blur-xl border-b border-slate-200 p-5 px-8 z-40 flex justify-between items-center print:hidden shadow-sm font-black">
+      <!-- Topbar content rendered via JS -->
+    </div>
+
+    <!-- Content Area -->
+    <div id="content" class="flex-1 p-10 flex justify-center overflow-auto pb-20 font-bold">
+      <!-- Content rendered via JS -->
+    </div>
+  </main>
+
+  <!-- Hidden File Input -->
+  <input type="file" id="fileInput" accept=".json" class="hidden" onchange="handleImportJSON(event)" />
+
+<script>
+// --- Constants & Utilities ---
+const FONT_FAMILIES = {
+  gothic: "'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'Meiryo', sans-serif",
+  mincho: "'Hiragino Mincho ProN', 'Noto Serif JP', 'Yu Mincho', 'MS PMincho', serif",
+  maru: "'Hiragino Maru Gothic ProN', 'HGMaruGothicMPRO', 'Rounded Mplus 1c', 'VAG Rounded', sans-serif",
+  kyokasho: "'UD Digi Kyokasho N-R', 'UD Digi Kyokasho NK-R', 'BIZ UDPKyokasho', 'Klee One', 'Yu Kyokasho', 'HGKyokashotai', serif"
+};
+
+const getNameFontSize = (name = "", font = "") => {
+  const isKyo = font === 'kyokasho';
+  if (name.length > 10) return "8px";
+  if (name.length > 7) return isKyo ? "10px" : "9px"; 
+  return isKyo ? "12px" : "11px";
+};
+
+const getKanaFontSize = (kana = "") => {
+  if (kana.length > 11) return "7px";
+  if (kana.length > 8) return "9px"; 
+  return "11px";
+};
+
+const toAlphaClass = (num) => String.fromCharCode(64 + parseInt(num));
+
+const generateDummyTSV = () => {
+  const classNames = [
+    ["佐藤", "伊藤", "小林", "吉田", "松本", "木村", "斎藤", "山崎", "森", "橋本"],
+    ["鈴木", "渡辺", "加藤", "山田", "井上", "林", "清水", "阿部", "池田", "山下"],
+    ["高橋", "田中", "中村", "佐々木", "山口", "石川", "中島", "前田", "藤田", "後藤"]
+  ];
+  const classKanas = [
+    ["さとう", "いとう", "こばやし", "よしだ", "まつもと", "きむら", "さいとう", "やまざき", "もり", "はしもと"],
+    ["すずき", "わたなべ", "かとう", "やまだ", "いのうえ", "はやし", "しみず", "あべ", "いけだ", "やました"],
+    ["たかはし", "たなか", "なかむら", "ささき", "やまぐち", "いしかわ", "なかじま", "まえだ", "ふじた", "ごとう"]
+  ];
+  const firsts = [
+    {k:"悠真", r:"ゆうま"}, {k:"陽葵", r:"ひまり"}, {k:"蓮", r:"れん"}, {k:"芽依", r:"めい"}, {k:"大翔", r:"はると"},
+    {k:"咲良", r:"さくら"}, {k:"湊", r:"みなと"}, {k:"結愛", r:"ゆあ"}, {k:"陽翔", r:"はると"}, {k:"莉子", r:"りこ"}
+  ];
+  let lines = ["組\tNo.\t氏名\tふりがな\t性別"];
+  for (let c = 1; c <= 3; c++) {
+    let classStudents = [];
+    const surnames = classNames[c-1];
+    const surKanas = classKanas[c-1];
+    for (let i = 0; i < 30; i++) {
+      const isBoy = i % 2 === 0;
+      const f = firsts[i % 10];
+      const sIndex = Math.floor(i / 3);
+      classStudents.push({
+        name: `${surnames[sIndex]}\u3000${f.k}`,
+        kana: `${surKanas[sIndex]}\u3000${f.r}`,
+        gender: isBoy ? "男" : "女"
+      });
+    }
+    classStudents.sort((a, b) => a.kana.localeCompare(b.kana, 'ja'));
+    classStudents.forEach((s, idx) => lines.push(`${c}\t${idx + 1}\t${s.name}\t${s.kana}\t${s.gender}`));
+  }
+  return lines.join('\n');
+};
+
+const TABS = [
+  { id: 'basic_settings', label: '基本名簿入力', icon: 'layout-dashboard' },
+  { id: 'info_settings', label: '情報個別設定', icon: 'settings' },
+  { id: 'exchange', label: '名簿 (交流あり)', icon: 'file-text' },
+  { id: 'no_exchange', label: '名簿 (交流なし)', icon: 'file-text' },
+  { id: 'evaluation', label: '名簿 (評価用)', icon: 'file-code' },
+];
+
+// --- State Management ---
+let state = {
+  activeTab: 'basic_settings',
+  classIds: ['1', '2', '3'],
+  selectedClass: '1',
+  classFormat: 'numeric',
+  normalColsCount: 15,
+  evalColsPerCategory: 5,
+  bottomRowCount: 0,
+  showFurigana: true,
+  showGender: true,
+  showGenderCount: true,
+  showPMember: false,
+  evalShowExchange: true,
+  selectedFont: 'gothic',
+  schoolName: '○○小学校',
+  grade: '1',
+  teachers: {},
+  tsvData: generateDummyTSV(),
+  additionalData: {}
+};
+
+// --- Computed Properties ---
+const getClassLabel = (id) => state.classFormat === 'alphabetic' ? `${toAlphaClass(id)}組` : `${id}組`;
+
+const getMasterStudents = () => {
+  if (!state.tsvData) return [];
+  const lines = state.tsvData.trim().split('\n');
+  return lines.slice(1).map(line => {
+    const parts = line.split('\t').map(p => p.trim().replace(/^"|"$/g, '').replace(/ /g, '\u3000'));
+    if (parts.length < 5) return null;
+    const [c, id, name, kana, gen] = parts;
+    const norm = isNaN(c) ? String(c).toUpperCase().charCodeAt(0) - 64 : String(c);
+    if (String(norm) !== String(state.selectedClass)) return null;
+    const key = `${state.selectedClass}_${id}`;
+    const info = state.additionalData[key] || {};
+    return { id, name, kana, gender: gen, special: !!info.specialSupport, pMember: !!info.pMember, key };
+  }).filter(s => s !== null);
+};
+
+const getDisplayedStudents = () => {
+  const master = getMasterStudents();
+  if (state.activeTab === 'no_exchange') return master.filter(s => !s.special);
+  if (state.activeTab === 'evaluation' && !state.evalShowExchange) return master.filter(s => !s.special);
+  return master;
+};
+
+// --- UI Actions ---
+let toastTimeout;
+const showMessage = (msg) => {
+  const toast = document.getElementById('toast');
+  document.getElementById('toast-msg').innerText = msg;
+  toast.classList.remove('hidden');
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => { toast.classList.add('hidden'); }, 3000);
+};
+
+const setActiveTab = (tabId) => {
+  state.activeTab = tabId;
+  if (tabId === 'evaluation') state.showPMember = false;
+  renderApp();
+};
+
+const triggerFileInput = () => document.getElementById('fileInput').click();
+
+// --- Data Operations ---
+window.addClass = () => {
+  const nextId = String(state.classIds.length + 1);
+  state.classIds.push(nextId);
+  showMessage('クラスを追加しました');
+  renderApp();
+};
+
+window.removeClass = (id) => {
+  if (state.classIds.length <= 1) return;
+  state.classIds = state.classIds.filter(cid => cid !== id);
+  if (state.selectedClass === id) state.selectedClass = state.classIds[0];
+  showMessage('クラスを削除しました');
+  renderApp();
+};
+
+window.handleExportJSON = () => {
+  const data = { ...state };
+  delete data.activeTab;
+  const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = '名簿データ.json'; a.click();
+  URL.revokeObjectURL(url);
+  showMessage('設定を保存しました');
+};
+
+window.handleImportJSON = (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    try {
+      const data = JSON.parse(event.target.result);
+      Object.assign(state, data);
+      showMessage('設定を復元しました');
+      renderApp();
+    } catch (err) { showMessage('読み込みに失敗しました'); }
+  };
+  reader.readAsText(file);
+  e.target.value = null;
+};
+
+window.handleExportHTML = () => {
+  const appData = {
+    schoolName: state.schoolName, grade: state.grade, teachers: state.teachers, tsvData: state.tsvData, 
+    additionalData: state.additionalData, classIds: state.classIds, classFormat: state.classFormat, 
+    normalColsCount: state.normalColsCount, evalColsPerCategory: state.evalColsPerCategory, 
+    bottomRowCount: state.bottomRowCount, selectedFont: state.selectedFont, 
+    options: { showFurigana: state.showFurigana, showGender: state.showGender, showGenderCount: state.showGenderCount, showPMember: state.showPMember, evalShowExchange: state.evalShowExchange }
+  };
+  
+  const htmlContent = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>学級名簿 Pro Viewer</title>
+<script src="https://cdn.tailwindcss.com"><\/script>
+<style>
+  @media print { @page { size: A4 portrait; margin: 15mm 10mm 15mm 20mm; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: white !important; } .print\\:hidden { display: none !important; } }
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; border: 2.5px solid #000 !important; height: 100%; }
+  .cell-border { border: 1px solid #000; }
+  .thick-right { border-right: 2.5px solid #000 !important; }
+  .thick-left { border-left: 2.5px solid #000 !important; }
+  tbody tr { height: auto; }
+  .justify-style { text-align: justify; text-align-last: justify; text-justify: inter-character; white-space: nowrap; padding: 0 1.2em !important; }
+  .gender-style { text-align: center; white-space: nowrap; font-size: 11px; padding: 0 !important; }
+  .text-center { text-align: center; }
+  select { color: #000 !important; font-weight: bold; cursor: pointer; }
+  button { cursor: pointer; }
+</style>
+</head>
+<body class="bg-slate-50 font-sans text-slate-800">
+  <div class="print:hidden sticky top-0 z-50 bg-slate-900 text-white p-5 shadow-xl border-b border-white/10 font-bold flex flex-wrap items-center gap-8">
+    <h1 class="text-xl font-black tracking-tight border-r border-white/20 pr-6">学級名簿 Pro</h1>
+    <div class="flex items-center gap-3">
+      <select id="classSel" class="bg-white text-slate-900 text-sm border-2 p-2.5 rounded-lg font-black" onchange="update()"></select>
+      <select id="typeSel" class="bg-white text-slate-900 text-sm border-2 p-2.5 rounded-lg font-black" onchange="update()">
+        <option value="exchange">交流あり</option><option value="no_exchange">交流なし</option><option value="evaluation">評価用</option>
+      </select>
+      <select id="fontSel" class="bg-white text-slate-900 text-sm border-2 p-2.5 rounded-lg font-black" onchange="update()">
+        <option value="gothic">ゴシック</option><option value="mincho">明朝</option><option value="maru">丸ゴシック</option><option value="kyokasho">教科書体</option>
+      </select>
+    </div>
+    <div class="flex items-center gap-6 text-sm ml-2">
+      <label id="furiLbl" class="flex items-center gap-2 cursor-pointer group">
+        <div class="relative flex items-center">
+          <input type="checkbox" id="furiChk" class="sr-only peer" checked onchange="update()">
+          <div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-blue-500 transition-colors shadow-inner"></div>
+          <div class="absolute left-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5 shadow-sm"></div>
+        </div>
+        <span class="font-bold text-slate-200 group-hover:text-white transition-colors">ふりがな</span>
+      </label>
+      <label class="flex items-center gap-2 cursor-pointer group">
+        <div class="relative flex items-center">
+          <input type="checkbox" id="genChk" class="sr-only peer" checked onchange="update()">
+          <div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-blue-500 transition-colors shadow-inner"></div>
+          <div class="absolute left-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5 shadow-sm"></div>
+        </div>
+        <span class="font-bold text-slate-200 group-hover:text-white transition-colors">性別</span>
+      </label>
+      <label class="flex items-center gap-2 cursor-pointer group">
+        <div class="relative flex items-center">
+          <input type="checkbox" id="cntChk" class="sr-only peer" checked onchange="update()">
+          <div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-emerald-500 transition-colors shadow-inner"></div>
+          <div class="absolute left-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5 shadow-sm"></div>
+        </div>
+        <span class="font-bold text-emerald-400 group-hover:text-emerald-300 transition-colors">人数計</span>
+      </label>
+      <label id="evalBox" class="flex items-center gap-2 cursor-pointer group">
+        <div class="relative flex items-center">
+          <input type="checkbox" id="evalExcChk" class="sr-only peer" checked onchange="update()">
+          <div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-rose-500 transition-colors shadow-inner"></div>
+          <div class="absolute left-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5 shadow-sm"></div>
+        </div>
+        <span class="font-bold text-rose-400 group-hover:text-rose-300 transition-colors">支援含</span>
+      </label>
+    </div>
+    <div class="flex items-center gap-4 ml-auto">
+      <div class="bg-emerald-600 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg">
+        <span class="text-xs">列:</span>
+        <button onclick="changeCol(1)" class="w-6 hover:bg-white/20 rounded text-lg font-black leading-none pb-0.5">＋</button>
+        <span id="colVal" class="w-6 text-center font-black">15</span>
+        <button onclick="changeCol(-1)" class="w-6 hover:bg-white/20 rounded text-lg font-black leading-none pb-0.5">－</button>
+      </div>
+      <div class="bg-blue-600 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg">
+        <span class="text-xs">行:</span>
+        <button onclick="changeRow(1)" class="w-6 hover:bg-white/20 rounded text-lg font-black leading-none pb-0.5">＋</button>
+        <span id="rowVal" class="w-5 text-center font-black">0</span>
+        <button onclick="changeRow(-1)" class="w-6 hover:bg-white/20 rounded text-lg font-black leading-none pb-0.5">－</button>
+      </div>
+      <button onclick="window.print()" class="bg-white text-slate-900 px-8 py-3 rounded-xl text-sm font-black hover:bg-blue-400 hover:text-white transition-colors shadow-lg ml-2">印刷</button>
+    </div>
+  </div>
+  <div class="flex justify-center p-10 print:p-0">
+    <div id="canvas" class="bg-white pt-[15mm] pb-[15mm] pl-[20mm] pr-[10mm] print:p-0 shadow-2xl print:shadow-none w-[210mm] h-[267mm] print:h-[267mm] flex flex-col"></div>
+  </div>
+<script>
+  const D = ${JSON.stringify(appData)};
+  let rowCount = D.bottomRowCount, normalCols = D.normalColsCount, evalCols = D.evalColsPerCategory;
+  const FONTS = ${JSON.stringify(FONT_FAMILIES)};
+  
+  // 初期値の反映
+  document.getElementById('furiChk').checked = D.options.showFurigana;
+  document.getElementById('genChk').checked = D.options.showGender;
+  document.getElementById('cntChk').checked = D.options.showGenderCount;
+  document.getElementById('evalExcChk').checked = D.options.evalShowExchange;
+
+  function changeRow(v) { rowCount = Math.max(0, rowCount + v); update(); }
+  function changeCol(v) { 
+    const type = document.getElementById('typeSel').value;
+    if(type==='evaluation') evalCols = Math.max(1, evalCols + v);
+    else normalCols = Math.max(1, normalCols + v);
+    update();
+  }
+  function toAlpha(n) { return String.fromCharCode(64 + parseInt(n)); }
+  function update() {
+    const selC = document.getElementById('classSel').value, type = document.getElementById('typeSel').value, fontK = document.getElementById('fontSel').value;
+    const furiChk = document.getElementById('furiChk'), furiLbl = document.getElementById('furiLbl'), showCnt = document.getElementById('cntChk').checked;
+    document.body.style.fontFamily = FONTS[fontK];
+    document.getElementById('rowVal').innerText = rowCount;
+    document.getElementById('colVal').innerText = (type==='evaluation' ? evalCols : normalCols);
+    document.getElementById('evalBox').style.display = (type==='evaluation' ? 'flex' : 'none');
+    
+    // 評価用の場合はふりがなスイッチを無効化
+    if(type==='evaluation') { 
+      furiChk.disabled = true; 
+      furiLbl.style.opacity = '0.4'; 
+      furiLbl.style.pointerEvents = 'none';
+    } else { 
+      furiChk.disabled = false; 
+      furiLbl.style.opacity = '1'; 
+      furiLbl.style.pointerEvents = 'auto';
+    }
+    
+    const students = D.tsvData.trim().split('\\n').slice(1).map(l => {
+      const p = l.split('\\t').map(x => x.trim().replace(/^"|"$/g, '').replace(/ /g, '\\u3000'));
+      if (p.length < 5) return null;
+      const norm = isNaN(p[0]) ? String(p[0]).toUpperCase().charCodeAt(0) - 64 : String(p[0]);
+      if (String(norm) !== String(selC)) return null;
+      return { id: p[1], name: p[2], kana: p[3], gender: p[4], special: !!(D.additionalData[selC + '_' + p[1]] || {}).specialSupport };
+    }).filter(s => s && (type === 'exchange' || type === 'evaluation' || (type === 'no_exchange' && !s.special)));
+    
+    const finalStudents = (type === 'evaluation' && !document.getElementById('evalExcChk').checked) ? students.filter(s => !s.special) : students;
+    
+    let h = '<div style="display:flex; justify-content:space-between; align-items:flex-end; font-weight:bold; font-size:12px; margin-bottom:8px;">';
+    h += '<div>' + D.schoolName + ' ' + D.grade + '年' + (D.classFormat==='alphabetic'?toAlpha(selC):selC) + '組';
+    if(showCnt) {
+       const m = finalStudents.filter(s=>s.gender==='男').length;
+       const w = finalStudents.filter(s=>s.gender==='女').length;
+       h += '<span style="margin-left:1.5em; color:#64748b">男 ' + m + ' 女 ' + w + ' 計 ' + finalStudents.length + '名</span>';
+    }
+    h += '</div><div>担任 <span style="display:inline-block; width:120px; border-bottom:1px solid #000; text-align:center">' + (D.teachers[selC] || '') + '</span></div></div>';
+    let bc = [{ k: 'id', l: 'No.', w: '3.5%' }, { k: 'name', l: '氏名', w: '14%', s: true }];
+    if (furiChk.checked && type !== 'evaluation') bc.push({ k: 'kana', l: 'ふりがな', w: '17%', s: true });
+    if (document.getElementById('genChk').checked) bc.push({ k: 'gender', l: '性別', w: '4%' });
+    const ic = type === 'evaluation' ? evalCols * 3 : normalCols, step = type === 'evaluation' ? evalCols : 5;
+    h += '<table><colgroup>';
+    bc.forEach(c => h += '<col style="width:' + c.w + '">');
+    for(let i=0; i<ic; i++) h += '<col style="width:auto">';
+    h += '</colgroup><thead style="font-weight:bold">';
+    if(type === 'evaluation') {
+       h += '<tr><th class="cell-border" style="border-top:2.2px solid #000" colspan="' + bc.length + '"></th>';
+       ['知識・技能','思考・判断・表現','主体的に取り組む態度'].forEach((t, i) => h += '<th class="cell-border text-center font-bold thick-right ' + (i===0?'thick-left':'') + '" style="font-size:10px; border-top:2.2px solid #000" colspan="' + evalCols + '">' + t + '</th>');
+       h += '</tr>';
+    }
+    h += '<tr>';
+    bc.forEach((_, i) => h += '<th class="cell-border ' + (i===bc.length-1?'thick-right':'') + '" style="height:100px"></th>');
+    for(let i=0; i<ic; i++) h += '<th class="cell-border ' + ((i+1)%step===0||(i+1)===ic?'thick-right':'') + '" style="height:100px"></th>';
+    h += '</tr><tr class="bg-white">';
+    bc.forEach((c, i) => h += '<th class="cell-border py-1 ' + (c.s?'justify-style':'text-center') + ' ' + (i===bc.length-1?'thick-right':'') + '" style="font-size:11px; padding:' + (c.s?'0 1.2em':'0') + '">' + c.l + '</th>');
+    for(let i=0; i<ic; i++) h += '<th class="cell-border py-1 text-center font-normal ' + ((i+1)%step===0||(i+1)===ic?'thick-right':'') + '" style="font-size:11px">/</th>';
+    h += '</tr></thead><tbody style="font-weight:normal">';
+    const addR = (s, blk) => {
+      h += '<tr>';
+      bc.forEach((c, i) => {
+        let v = blk ? '&nbsp;' : (c.k==='pMember'?(D.additionalData[selC+"_"+s.id]?.pMember?'〇':'&nbsp;'):s[c.k]);
+        h += '<td class="cell-border ' + (c.s?'justify-style':'text-center') + ' ' + (i===bc.length-1?'thick-right':'') + '" style="font-size:11px; padding:' + (c.s?'0 1.2em':'0') + '">' + v + '</td>';
+      });
+      for(let i=0; i<ic; i++) h += '<td class="cell-border ' + ((i+1)%step===0||(i+1)===ic?'thick-right':'') + '"></td>';
+      h += '</tr>';
+    };
+    finalStudents.forEach(s => addR(s, false));
+    for(let r=0; r<rowCount; r++) addR(null, true);
+    h += '</tbody></table>';
+    document.getElementById('canvas').innerHTML = h;
+  }
+  window.onload = () => {
+    const sel = document.getElementById('classSel');
+    D.classIds.forEach(id => { const opt = document.createElement('option'); opt.value = id; opt.innerText = (D.classFormat==='alphabetic'?toAlpha(id):id)+'組'; sel.appendChild(opt); });
+    
+    // フォント選択の初期化
+    document.getElementById('fontSel').value = D.selectedFont;
+
+    update();
+  }
+<\/script>
+</body>
+</html>`;
+  const blob = new Blob([htmlContent], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = '名簿ビューア.html'; a.click();
+  URL.revokeObjectURL(url);
+  showMessage('ビューア用HTMLを出力しました');
+};
+
+// --- Input Handlers ---
+window.updateState = (key, value) => {
+  state[key] = value;
+  renderApp(); // 簡易的に全体再描画
+};
+
+window.updateInputState = (key, value) => {
+  state[key] = value;
+  renderTopbar(); // 入力中はトップバーのみ更新してフォーカスを維持
+};
+
+window.handleTeacherChange = (id, value) => {
+  state.teachers[id] = value;
+  renderTopbar();
+};
+
+window.handleInfoChange = (id, key, checked) => {
+  const stateKey = `${state.selectedClass}_${id}`;
+  if (!state.additionalData[stateKey]) state.additionalData[stateKey] = {};
+  state.additionalData[stateKey][key] = checked;
+  // Info設定画面なら全体再描画でも問題ない（チェックボックスのため）
+  renderApp();
+};
+
+window.changeSettingNumber = (key, delta) => {
+  if (key === 'evalColsPerCategory' || key === 'normalColsCount') {
+    state[key] = Math.max(1, state[key] + delta);
+  } else if (key === 'bottomRowCount') {
+    state[key] = Math.max(0, state[key] + delta);
+  }
+  renderApp();
+};
+
+// --- Rendering Logic ---
+const renderSidebar = () => {
+  let html = `<div class="text-xs font-black text-slate-500 px-4 py-2 uppercase tracking-widest mt-2">メニュー</div>`;
+  TABS.forEach(tab => {
+    const isActive = state.activeTab === tab.id;
+    const activeClass = isActive ? 'bg-blue-600 text-white shadow-xl translate-x-1' : 'hover:text-white hover:bg-white/5';
+    html += `
+      <button onclick="setActiveTab('${tab.id}')" class="w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-sm font-bold transition-all duration-200 ${activeClass}">
+        <i data-lucide="${tab.icon}" class="w-5 h-5"></i>${tab.label}
+      </button>
+    `;
+  });
+  html += `
+    <div class="mt-8 text-xs font-black text-slate-500 px-4 py-2 uppercase tracking-widest">データ管理</div>
+    <button onclick="handleExportJSON()" class="w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl text-sm hover:text-white transition-all font-bold"><i data-lucide="download" class="w-5 h-5"></i>保存</button>
+    <button onclick="triggerFileInput()" class="w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl text-sm hover:text-white transition-all font-bold"><i data-lucide="upload" class="w-5 h-5"></i>復元</button>
+    <button onclick="handleExportHTML()" class="w-full flex items-center gap-4 px-5 py-4 mt-6 rounded-2xl text-sm font-bold bg-emerald-600/10 text-emerald-400 hover:bg-emerald-600 hover:text-white border border-emerald-600/20 active:scale-95 transition-all">
+      <i data-lucide="file-code" class="w-5 h-5"></i>配布用HTML
+    </button>
+  `;
+  document.getElementById('nav-tabs').innerHTML = html;
+};
+
+const renderTopbar = () => {
+  const isSettings = state.activeTab.includes('settings');
+  const isEval = state.activeTab === 'evaluation';
+  
+  let html = `<div class="flex bg-slate-200/50 p-1.5 rounded-2xl gap-1">`;
+  state.classIds.forEach(id => {
+    const isActive = state.selectedClass === id;
+    const activeClass = isActive ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:bg-white/50';
+    html += `<button onclick="updateState('selectedClass', '${id}')" class="px-6 py-2 rounded-xl text-sm font-black transition-all ${activeClass}">${getClassLabel(id)}</button>`;
+  });
+  html += `</div>`;
+
+  if (!isSettings) {
+    const colsCount = isEval ? state.evalColsPerCategory : state.normalColsCount;
+    const colsKey = isEval ? 'evalColsPerCategory' : 'normalColsCount';
+    
+    // Toggle UI generator
+    const createToggle = (id, label, isChecked, onChangeKey, isDisabled = false, activeColor = "peer-checked:bg-blue-600", textColor = "text-slate-600") => `
+      <label class="flex items-center gap-2 cursor-pointer group ${isDisabled ? 'opacity-40 cursor-not-allowed' : ''}">
+        <div class="relative flex items-center">
+          <input type="checkbox" id="${id}" class="sr-only peer" ${isChecked ? 'checked' : ''} ${isDisabled ? 'disabled' : ''} onchange="updateState('${onChangeKey}', this.checked)">
+          <div class="w-10 h-6 bg-slate-300 rounded-full peer ${activeColor} transition-colors shadow-inner"></div>
+          <div class="absolute left-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-4 shadow-sm"></div>
+        </div>
+        <span class="text-sm font-bold ${textColor} group-hover:text-slate-900 transition-colors">${label}</span>
+      </label>
+    `;
+
+    html += `
+      <div class="flex items-center gap-8">
+        <div class="flex items-center gap-5 border-r border-slate-200 pr-8">
+          ${createToggle('furiChk', 'ふりがな', state.showFurigana, 'showFurigana', isEval)}
+          ${createToggle('genChk', '性別', state.showGender, 'showGender')}
+          ${createToggle('cntChk', '人数計', state.showGenderCount, 'showGenderCount', false, "peer-checked:bg-emerald-500", "text-blue-600")}
+        </div>
+        <div class="flex items-center gap-3 font-black">
+          <select onchange="updateState('selectedFont', this.value)" class="text-sm border-2 border-slate-100 rounded-xl px-4 py-2.5 font-black outline-none bg-white shadow-sm text-slate-900 cursor-pointer">
+            <option value="gothic" ${state.selectedFont === 'gothic' ? 'selected' : ''}>ゴシック</option>
+            <option value="mincho" ${state.selectedFont === 'mincho' ? 'selected' : ''}>明朝</option>
+            <option value="maru" ${state.selectedFont === 'maru' ? 'selected' : ''}>丸ゴシック</option>
+            <option value="kyokasho" ${state.selectedFont === 'kyokasho' ? 'selected' : ''}>教科書体</option>
+          </select>
+          <div class="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-xl shadow-lg font-bold">
+            <span class="text-[11px] font-black uppercase">列:</span>
+            <button onclick="changeSettingNumber('${colsKey}', 1)" class="w-6 text-lg hover:bg-white/20 rounded font-black pb-0.5">＋</button>
+            <span class="text-sm w-6 text-center font-black">${colsCount}</span>
+            <button onclick="changeSettingNumber('${colsKey}', -1)" class="w-6 text-lg hover:bg-white/20 rounded font-black pb-0.5">－</button>
+          </div>
+          <div class="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl shadow-lg font-bold">
+            <span class="text-[11px] font-black uppercase">行:</span>
+            <button onclick="changeSettingNumber('bottomRowCount', 1)" class="w-6 text-lg hover:bg-white/20 rounded font-black pb-0.5">＋</button>
+            <span class="text-sm w-5 text-center font-black">${state.bottomRowCount}</span>
+            <button onclick="changeSettingNumber('bottomRowCount', -1)" class="w-6 text-lg hover:bg-white/20 rounded font-black pb-0.5">－</button>
+          </div>
+          <button onclick="window.print()" class="flex items-center gap-3 bg-slate-900 text-white px-8 py-3 rounded-xl text-sm font-black hover:bg-black transition-all shadow-xl font-bold ml-2"><i data-lucide="printer" class="w-5 h-5"></i> 印刷</button>
+        </div>
+      </div>
+    `;
+  }
+  document.getElementById('topbar').innerHTML = html;
+};
+
+const renderBasicSettings = () => {
+  let teachersHtml = state.classIds.map(id => `
+    <div class="flex items-center gap-4 group">
+      <span class="text-sm font-black text-slate-400 w-12 text-center">${getClassLabel(id)}</span>
+      <input type="text" value="${state.teachers[id] || ''}" oninput="handleTeacherChange('${id}', this.value)" placeholder="担任名" class="flex-1 border-2 border-slate-50 rounded-xl px-4 py-3 focus:border-rose-400 outline-none font-bold text-sm bg-white transition-all shadow-sm text-slate-900" />
+      <button onclick="removeClass('${id}')" class="opacity-0 group-hover:opacity-100 p-2 text-slate-300 hover:text-rose-500 transition-all font-black"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
+    </div>
+  `).join('');
+
+  return `
+    <div class="max-w-5xl w-full space-y-10 animate-fade-in font-bold text-slate-900">
+      <div class="bg-white p-10 rounded-[40px] shadow-sm border border-slate-100">
+        <div class="grid grid-cols-2 gap-12 border-b border-slate-100 pb-10">
+          <div class="space-y-6">
+            <label class="text-xs font-black text-slate-400 uppercase tracking-widest font-black">学校・学年情報</label>
+            <input type="text" value="${state.schoolName}" oninput="updateInputState('schoolName', this.value)" class="w-full border-2 border-slate-50 focus:border-blue-500 rounded-2xl p-4 font-black text-xl outline-none bg-slate-50/50 transition-all shadow-inner font-bold" />
+            <div class="flex items-center gap-3 font-black text-lg"><input type="number" value="${state.grade}" oninput="updateInputState('grade', this.value)" class="w-24 border-2 border-slate-50 rounded-2xl p-3 text-center bg-slate-50/50 shadow-inner font-bold" /> 年生</div>
+          </div>
+          <div class="space-y-5 font-bold">
+            <label class="text-xs font-black text-slate-400 uppercase tracking-widest font-black">クラス・担任設定</label>
+            <div class="grid grid-cols-1 gap-3 overflow-y-auto max-h-[300px] pr-2 custom-scrollbar shadow-inner p-3 rounded-2xl bg-slate-50/30">
+              ${teachersHtml}
+            </div>
+            <button onclick="addClass()" class="w-full flex items-center justify-center gap-2 py-4 mt-2 border-2 border-dashed border-slate-200 rounded-2xl text-slate-400 hover:border-blue-400 hover:text-blue-500 transition-all text-sm font-black">
+              <i data-lucide="plus" class="w-5 h-5"></i> クラスを追加
+            </button>
+          </div>
+        </div>
+        <div class="mt-10 bg-slate-900 p-8 rounded-[32px] shadow-2xl font-black text-white">
+          <h3 class="text-lg font-black flex items-center gap-3 mb-4 font-bold text-slate-100"><i data-lucide="info" class="w-6 h-6 text-emerald-400"></i> Excel貼り付け</h3>
+          <textarea oninput="updateInputState('tsvData', this.value)" class="w-full h-[400px] border-2 border-white/5 focus:border-blue-500 rounded-[24px] p-8 text-sm font-mono whitespace-pre outline-none bg-black/20 text-blue-100 leading-relaxed shadow-inner font-bold" placeholder="データをここに貼り付けます">${state.tsvData}</textarea>
+        </div>
+      </div>
+    </div>
+  `;
+};
+
+const renderInfoSettings = () => {
+  const masterStudents = getMasterStudents();
+  
+  // Custom toggle logic for Info Table
+  const createInfoToggle = (id, key, isChecked, colorClass) => `
+    <label class="relative inline-flex items-center cursor-pointer">
+      <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="handleInfoChange('${id}', '${key}', this.checked)" class="sr-only peer" />
+      <div class="w-11 h-6 bg-slate-200 rounded-full peer ${colorClass} transition-colors shadow-inner"></div>
+      <div class="absolute left-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5 shadow-sm"></div>
+    </label>
+  `;
+
+  let tbodyHtml = masterStudents.map(s => `
+    <tr class="border-b border-slate-50 hover:bg-slate-100/50 transition-colors font-bold">
+      <td class="py-2 px-4 text-center font-mono text-slate-400 text-base font-bold">${s.id}</td>
+      <td class="py-2 px-4 font-black text-slate-700 text-base">${s.name}</td>
+      <td class="py-2 px-4 text-center">${createInfoToggle(s.id, 'specialSupport', s.special, 'peer-checked:bg-blue-600')}</td>
+      <td class="py-2 px-4 text-center">${createInfoToggle(s.id, 'pMember', s.pMember, 'peer-checked:bg-rose-500')}</td>
+    </tr>
+  `).join('');
+
+  return `
+    <div class="max-w-5xl w-full animate-fade-in font-bold text-slate-800 font-black">
+      <div class="bg-white rounded-[40px] shadow-2xl overflow-hidden border border-slate-100">
+        <div class="p-8 bg-slate-50 border-b flex justify-between items-center font-bold text-slate-900">
+          <h2 class="text-xl font-black text-slate-800 flex items-center gap-4 font-bold font-black"><i data-lucide="settings" class="w-6 h-6 text-blue-600"></i> 個別設定 <span class="text-base font-bold text-slate-400">(${getClassLabel(state.selectedClass)})</span></h2>
+        </div>
+        <table class="w-full border-collapse font-black text-slate-900">
+          <thead><tr class="text-xs text-slate-400 font-bold"><th class="p-4 border-b text-center w-24">No.</th><th class="p-4 border-b text-left">児童氏名</th><th class="p-4 border-b text-center w-40 text-blue-600">特別支援</th><th class="p-4 border-b text-center w-40 text-rose-600">P会員</th></tr></thead>
+          <tbody>${tbodyHtml}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+};
+
+const renderPrintView = () => {
+  const isEval = state.activeTab === 'evaluation';
+  const hasFuri = state.showFurigana && !isEval;
+  const isKyo = state.selectedFont === 'kyokasho';
+  const displayedStudents = getDisplayedStudents();
+  const maleCount = displayedStudents.filter(s => s.gender === '男').length;
+  const femaleCount = displayedStudents.filter(s => s.gender === '女').length;
+
+  let baseCols = [{ key: 'id', label: 'No.', w: '3.5%', c: true }];
+  baseCols.push({ key: 'name', label: '氏名', w: '14%', s: true });
+  if (hasFuri) baseCols.push({ key: 'kana', label: 'ふりがな', w: '17%', s: true });
+  if (state.showGender) baseCols.push({ key: 'gender', label: '性別', w: '4%', c: true });
+  if (state.showPMember) baseCols.push({ key: 'pMember', label: 'P会員', w: '8%', c: true });
+  
+  const icCount = isEval ? state.evalColsPerCategory * 3 : state.normalColsCount;
+  const step = isEval ? state.evalColsPerCategory : 5;
+
+  // Header
+  let headerHtml = `
+    <div class="flex justify-between items-end text-slate-900 shrink-0 text-[12px] font-bold mb-1 font-black">
+      <div>
+        <div class="flex items-baseline gap-4">
+          <span class="tracking-widest">${state.schoolName}</span>
+          <span>${state.grade}年${getClassLabel(state.selectedClass)}</span>
+          ${state.showGenderCount ? `<span class="ml-4 font-bold text-slate-500">男 ${maleCount} 女 ${femaleCount} 計 ${displayedStudents.length}名</span>` : ''}
+        </div>
+        ${isEval ? `
+          <div class="mt-2 flex gap-8 font-bold text-slate-800">
+            <span>教科【<span class="inline-block w-24 border-b border-black"></span>】</span>
+            <span>単元【<span class="inline-block w-48 border-b border-black"></span>】</span>
+          </div>
+        ` : ''}
+      </div>
+      <div class="text-right flex items-end gap-2 font-bold text-slate-900">
+        <span>担任</span>
+        <span class="inline-block w-28 border-b border-black text-center pb-0.5">${state.teachers[state.selectedClass] || ''}</span>
+      </div>
+    </div>
+  `;
+
+  // Table structure
+  let tableHtml = `<table class="w-full h-full border-collapse border-2 border-black table-fixed leading-none"><colgroup>`;
+  baseCols.forEach(c => tableHtml += `<col style="width: ${c.w}" />`);
+  for(let i=0; i<icCount; i++) tableHtml += `<col style="width: auto" />`;
+  tableHtml += `</colgroup><thead class="font-bold">`;
+  
+  if (isEval) {
+    tableHtml += `<tr><th class="cell-border" style="border-top: 2.5px solid #000" colspan="${baseCols.length}"></th>`;
+    ['知識・技能','思考・判断・表現','主体的に取り組む態度'].forEach((t, idx) => {
+      tableHtml += `<th class="cell-border py-1 text-[10px] text-center font-bold thick-right ${idx === 0 ? 'thick-left' : ''}" style="border-top: 2.5px solid #000" colspan="${state.evalColsPerCategory}">${t}</th>`;
+    });
+    tableHtml += `</tr>`;
+  }
+
+  tableHtml += `<tr>`;
+  baseCols.forEach((_, i) => tableHtml += `<th class="cell-border h-[100px] ${i === baseCols.length - 1 ? 'thick-right' : ''}"></th>`);
+  for(let i=0; i<icCount; i++) tableHtml += `<th class="cell-border h-[100px] ${(i + 1) % step === 0 || (i + 1) === icCount ? 'thick-right' : ''}"></th>`;
+  tableHtml += `</tr><tr class="bg-white text-center">`;
+  
+  baseCols.forEach((c, i) => {
+    const fs = (isKyo && c.key === 'name') ? '12px' : '11px';
+    const align = c.s ? 'justify' : 'center';
+    tableHtml += `<th class="cell-border py-1 ${i === baseCols.length - 1 ? 'thick-right' : ''}" style="font-size: ${fs}; padding: ${c.s ? '0 1.2em' : '0'}; text-align: ${align}; text-align-last: ${align}">${c.label}</th>`;
+  });
+  for(let i=0; i<icCount; i++) {
+    tableHtml += `<th class="cell-border py-1 font-normal ${(i + 1) % step === 0 || (i + 1) === icCount ? 'thick-right' : ''}" style="font-size: 11px">/</th>`;
+  }
+  tableHtml += `</tr></thead><tbody class="h-full font-normal">`;
+
+  // Body rows
+  displayedStudents.forEach((s, idx) => {
+    tableHtml += `<tr class="h-auto">`;
+    baseCols.forEach((c, ci) => {
+      let val = s[c.key] || '';
+      if (c.key === 'pMember') {
+        val = state.additionalData[`${state.selectedClass}_${s.id}`]?.pMember ? '〇' : '';
+      }
+      const fs = c.key === 'name' ? getNameFontSize(val, state.selectedFont) : (c.key === 'kana' ? getKanaFontSize(val) : "11px");
+      const align = c.s ? 'justify' : 'center';
+      tableHtml += `<td class="cell-border px-1 whitespace-nowrap overflow-hidden ${ci === baseCols.length - 1 ? 'thick-right' : ''}" style="font-size: ${fs}; padding: ${c.s ? '0 1.2em' : '0'}; text-align: ${align}; text-align-last: ${align}">${val}</td>`;
+    });
+    for(let i=0; i<icCount; i++) {
+      tableHtml += `<td class="cell-border ${(i + 1) % step === 0 || (i + 1) === icCount ? 'thick-right' : ''}">\u00a0</td>`;
+    }
+    tableHtml += `</tr>`;
+  });
+
+  // Empty rows
+  for(let rIdx=0; rIdx<state.bottomRowCount; rIdx++) {
+    tableHtml += `<tr class="h-auto">`;
+    baseCols.forEach((c, ci) => tableHtml += `<td class="cell-border ${ci === baseCols.length - 1 ? 'thick-right' : ''}">\u00a0</td>`);
+    for(let i=0; i<icCount; i++) tableHtml += `<td class="cell-border ${(i + 1) % step === 0 || (i + 1) === icCount ? 'thick-right' : ''}">\u00a0</td>`;
+    tableHtml += `</tr>`;
+  }
+
+  tableHtml += `</tbody></table>`;
+
+  return `
+    <div id="print-container" class="flex justify-center w-full">
+      <div id="print-area" class="w-[210mm] h-[267mm] bg-white pt-[15mm] pb-[15mm] pl-[20mm] pr-[10mm] border border-slate-300 shadow-2xl flex flex-col shrink-0 overflow-hidden font-black text-slate-900" style="font-family: ${FONT_FAMILIES[state.selectedFont]}">
+        ${headerHtml}
+        <div class="flex-1 mt-2 min-h-0 overflow-hidden">
+          ${tableHtml}
+        </div>
+      </div>
+    </div>
+  `;
+};
+
+const renderContent = () => {
+  const contentDiv = document.getElementById('content');
+  if (state.activeTab === 'basic_settings') contentDiv.innerHTML = renderBasicSettings();
+  else if (state.activeTab === 'info_settings') contentDiv.innerHTML = renderInfoSettings();
+  else contentDiv.innerHTML = renderPrintView();
+};
+
+const renderApp = () => {
+  renderSidebar();
+  renderTopbar();
+  renderContent();
+  lucide.createIcons();
+};
+
+// --- Initialization ---
+window.onload = () => {
+  renderApp();
+};
+</script>
+</body>
+</html>
