@@ -322,7 +322,7 @@ window.handleExportHTML = () => {
 <style>
   @media print { 
     @page { size: A4 portrait; margin: 15mm 10mm 15mm 20mm; } 
-    body, div { height: auto !important; overflow: visible !important; background: white !important; } 
+    body, html, .print-wrapper { height: auto !important; overflow: visible !important; background: white !important; } 
     .print\\:hidden { display: none !important; } 
     #canvas { padding: 0 !important; box-shadow: none !important; border: none !important; margin: 0 !important; width: 100% !important; }
   }
@@ -330,6 +330,7 @@ window.handleExportHTML = () => {
   .cell-border { border: 1px solid #000; }
   .thick-right { border-right: 2.5px solid #000 !important; }
   .thick-left { border-left: 2.5px solid #000 !important; }
+  tbody tr { height: auto; }
   .justify-style { text-align: justify; text-align-last: justify; text-justify: inter-character; white-space: nowrap; padding: 0 1.2em !important; }
   .gender-style { text-align: center; white-space: nowrap; font-size: 11px; padding: 0 !important; }
   .text-center { text-align: center; }
@@ -399,8 +400,8 @@ window.handleExportHTML = () => {
       <button onclick="window.print()" class="bg-white text-slate-900 px-8 py-3 rounded-xl text-sm font-black hover:bg-blue-400 hover:text-white transition-colors shadow-lg ml-2">印刷</button>
     </div>
   </div>
-  <div class="flex justify-center p-10 print:p-0">
-    <div id="canvas" class="bg-white pt-[15mm] pb-[15mm] pl-[20mm] pr-[10mm] print:p-0 print:border-none print:shadow-none print:w-full print:h-[266mm] border border-slate-300 shadow-2xl w-[210mm] h-[297mm] flex flex-col shrink-0 overflow-hidden text-slate-900"></div>
+  <div class="print-wrapper flex justify-center p-10 print:p-0 print:w-full">
+    <div id="canvas" class="bg-white pt-[15mm] pb-[15mm] pl-[20mm] pr-[10mm] print:p-0 print:border-none print:shadow-none print:w-full print:h-[266mm] print:m-0 border border-slate-300 shadow-2xl w-[210mm] h-[297mm] flex flex-col shrink-0 overflow-hidden text-slate-900"></div>
   </div>
 <script>
   const D = ${JSON.stringify(appData)};
@@ -458,6 +459,10 @@ window.handleExportHTML = () => {
        h += '<span style="margin-left:1.5em; color:#64748b">男 ' + m + ' 女 ' + w + ' 計 ' + finalStudents.length + '名</span>';
     }
     h += '</div><div>担任 <span style="display:inline-block; width:120px; border-bottom:1px solid #000; text-align:center">' + (D.teachers[selC] || '') + '</span></div></div>';
+    
+    // テーブルコンテナ開始（フレックスで伸ばす領域）
+    h += '<div class="flex-1 mt-2 min-h-0 overflow-hidden">';
+
     let bc = [{ k: 'id', l: 'No.', w: '3.5%' }, { k: 'name', l: '氏名', w: '14%', s: true }];
     if (furiChk.checked && type !== 'evaluation') bc.push({ k: 'kana', l: 'ふりがな', w: '17%', s: true });
     if (document.getElementById('genChk').checked) bc.push({ k: 'gender', l: '性別', w: '4%' });
@@ -479,7 +484,7 @@ window.handleExportHTML = () => {
     for(let i=0; i<ic; i++) h += '<th class="cell-border py-1 text-center font-normal ' + ((i+1)%step===0||(i+1)===ic?'thick-right':'') + '" style="font-size:11px">/</th>';
     h += '</tr></thead><tbody style="font-weight:normal">';
     const addR = (s, blk) => {
-      h += '<tr>';
+      h += '<tr class="h-auto">';
       bc.forEach((c, i) => {
         let v = blk ? '&nbsp;' : (c.k==='pMember'?(D.additionalData[selC+"_"+s.id]?.pMember?'〇':'&nbsp;'):s[c.k]);
         h += '<td class="cell-border ' + (c.s?'justify-style':'text-center') + ' ' + (i===bc.length-1?'thick-right':'') + '" style="font-size:11px; padding:' + (c.s?'0 1.2em':'0') + '">' + v + '</td>';
@@ -489,7 +494,10 @@ window.handleExportHTML = () => {
     };
     finalStudents.forEach(s => addR(s, false));
     for(let r=0; r<rowCount; r++) addR(null, true);
-    h += '</tbody></table>';
+    
+    // テーブルとコンテナを閉じる
+    h += '</tbody></table></div>';
+    
     document.getElementById('canvas').innerHTML = h;
   }
   window.onload = () => {
@@ -794,7 +802,7 @@ const renderPrintView = () => {
 
   // Body rows
   displayedStudents.forEach((s, idx) => {
-    tableHtml += `<tr>`;
+    tableHtml += `<tr class="h-auto">`;
     baseCols.forEach((c, ci) => {
       let val = s[c.key] || '';
       if (c.key === 'pMember') {
@@ -812,7 +820,7 @@ const renderPrintView = () => {
 
   // Empty rows
   for(let rIdx=0; rIdx<state.bottomRowCount; rIdx++) {
-    tableHtml += `<tr>`;
+    tableHtml += `<tr class="h-auto">`;
     baseCols.forEach((c, ci) => tableHtml += `<td class="cell-border ${ci === baseCols.length - 1 ? 'thick-right' : ''}">\u00a0</td>`);
     for(let i=0; i<icCount; i++) tableHtml += `<td class="cell-border ${(i + 1) % step === 0 || (i + 1) === icCount ? 'thick-right' : ''}">\u00a0</td>`;
     tableHtml += `</tr>`;
