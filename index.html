@@ -9,7 +9,17 @@
 <style>
   @media print { 
     @page { size: A4 portrait; margin: 15mm 10mm 15mm 20mm; } 
-    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: white !important; } 
+    body, main, #content { 
+      height: auto !important; 
+      overflow: visible !important; 
+      background: white !important; 
+    }
+    #content { padding: 0 !important; }
+    #print-area { 
+      box-shadow: none !important; 
+      border: none !important; 
+      margin: 0 !important; 
+    }
     .print\:hidden { display: none !important; }
   } 
   .animate-fade-in { animation: fade-in 0.3s ease-out forwards; } 
@@ -316,7 +326,12 @@ window.handleExportHTML = () => {
 <title>学級名簿 Pro Viewer</title>
 <script src="https://cdn.tailwindcss.com"><\/script>
 <style>
-  @media print { @page { size: A4 portrait; margin: 15mm 10mm 15mm 20mm; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: white !important; } .print\\:hidden { display: none !important; } }
+  @media print { 
+    @page { size: A4 portrait; margin: 15mm 10mm 15mm 20mm; } 
+    body, div { height: auto !important; overflow: visible !important; background: white !important; } 
+    .print\\:hidden { display: none !important; } 
+    #canvas { padding: 0 !important; box-shadow: none !important; border: none !important; }
+  }
   table { width: 100%; border-collapse: collapse; table-layout: fixed; border: 2.5px solid #000 !important; height: 100%; }
   .cell-border { border: 1px solid #000; }
   .thick-right { border-right: 2.5px solid #000 !important; }
