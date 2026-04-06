@@ -79,7 +79,7 @@
           <ul class="list-disc list-inside space-y-2 text-sm ml-2 leading-relaxed mt-3 text-slate-500">
             <li>データはタブ区切り（Excelからのコピー標準状態）で認識されます。</li>
             <li>1行目は見出し行として扱われ、データ本体は2行目から読み込まれます。</li>
-            <li>不足している列がある場合、その行は無視されます。</li>
+            <li>不足している列がある場合、tその行は無視されます。</li>
           </ul>
         </section>
       </div>
@@ -135,7 +135,6 @@ const getNameFontSize = (name = "", font = "") => {
   const baseSize = isKyo ? 12 : 11;
   const len = name.length;
   if (len <= 6) return baseSize + "px";
-  // A4用紙の描画領域から算出した氏名列(14%)の安全幅(px)
   const maxWidth = 80; 
   const calculatedSize = maxWidth / len;
   return Math.min(baseSize, calculatedSize).toFixed(1) + "px";
@@ -145,7 +144,6 @@ const getKanaFontSize = (kana = "") => {
   const baseSize = 11;
   const len = kana.length;
   if (len <= 8) return baseSize + "px";
-  // ふりがな列(17%)の安全幅(px)
   const maxWidth = 100; 
   const calculatedSize = maxWidth / len;
   return Math.min(baseSize, calculatedSize).toFixed(1) + "px";
@@ -191,7 +189,6 @@ const generateDummyTSV = () => {
       const isBoy = i % 2 === 0;
       const f = firsts[i % 10];
       const sIndex = Math.floor(i / 3);
-      // 確認用に15人に1人、長いデータを作成する
       const extra = i % 15 === 0 ? "あいうえおかき" : "";
       classStudents.push({
         name: `${surnames[sIndex]}\u3000${f.k}${extra}`,
@@ -242,7 +239,6 @@ let saveTimeout;
 
 const saveToLocalStorage = () => {
   clearTimeout(saveTimeout);
-  // 500msの遅延実行により、タイピング中の連続書き込み負荷を防止
   saveTimeout = setTimeout(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, 500);
@@ -253,7 +249,7 @@ const loadFromLocalStorage = () => {
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
-      state = { ...state, ...parsed }; // 既存のstate構造を保護しつつ上書き
+      state = { ...state, ...parsed };
     } catch (e) {
       console.error('Failed to parse local storage data', e);
     }
@@ -334,7 +330,7 @@ window.clearTsvData = () => {
 
 window.handleExportJSON = () => {
   const data = { ...state };
-  delete data.activeTab; // エクスポート時にはタブ状態は含めない
+  delete data.activeTab;
   const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a'); a.href = url; a.download = '名簿データ.json'; a.click();
@@ -596,9 +592,9 @@ window.handleExportHTML = () => {
             if (longNameMode === 'wrap' && v.length >= 9) {
               let l1 = v.substring(0, 8);
               let l2 = v.substring(8);
-              v = '<div style="display:flex; align-items:center; justify-content:center; height:0px;"><div style="text-align:left; line-height:0.95; white-space:nowrap;">' + l1 + '<br/>' + l2 + '</div></div>';
+              v = '<div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%);"><div style="text-align:left; line-height:0.95; white-space:nowrap;">' + l1 + '<br/>' + l2 + '</div></div>';
               fs = getNameFontSize("12345678", fontK);
-              pad = getNamePadding("12345678");
+              pad = "0";
               ws = 'normal'; align = 'center'; alignLast = 'auto';
             } else {
               fs = getNameFontSize(v, fontK);
@@ -608,9 +604,9 @@ window.handleExportHTML = () => {
             if (longNameMode === 'wrap' && v.length >= 11) {
               let l1 = v.substring(0, 10);
               let l2 = v.substring(10);
-              v = '<div style="display:flex; align-items:center; justify-content:center; height:0px;"><div style="text-align:left; line-height:0.95; white-space:nowrap;">' + l1 + '<br/>' + l2 + '</div></div>';
+              v = '<div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%);"><div style="text-align:left; line-height:0.95; white-space:nowrap;">' + l1 + '<br/>' + l2 + '</div></div>';
               fs = getKanaFontSize("1234567890");
-              pad = getKanaPadding("1234567890");
+              pad = "0";
               ws = 'normal'; align = 'center'; alignLast = 'auto';
             } else {
               fs = getKanaFontSize(v);
@@ -618,7 +614,8 @@ window.handleExportHTML = () => {
             }
           }
         }
-        h += '<td class="cell-border ' + (c.s&&ws==='nowrap'?'justify-style':'') + ' ' + (i===bc.length-1?'thick-right':'') + '" style="font-size:' + fs + '; padding:' + pad + '; white-space:' + ws + '; text-align:' + align + '; text-align-last:' + alignLast + ';">' + v + '</td>';
+        let extraStyle = ws === 'normal' ? ' position:relative;' : '';
+        h += '<td class="cell-border ' + (c.s&&ws==='nowrap'?'justify-style':'') + ' ' + (i===bc.length-1?'thick-right':'') + '" style="font-size:' + fs + '; padding:' + pad + '; white-space:' + ws + '; text-align:' + align + '; text-align-last:' + alignLast + ';' + extraStyle + '">' + v + '</td>';
       });
       for(let i=0; i<ic; i++) h += '<td class="cell-border ' + ((i+1)%step===0 || (i+1)===ic?'thick-right':'') + '"></td>';
       h += '</tr>';
@@ -948,9 +945,9 @@ const renderPrintView = () => {
         if (state.longNameMode === 'wrap' && val.length >= 9) {
           let l1 = val.substring(0, 8);
           let l2 = val.substring(8);
-          val = `<div style="display:flex; align-items:center; justify-content:center; height:0px;"><div style="text-align:left; line-height:0.95; white-space:nowrap;">${l1}<br/>${l2}</div></div>`;
+          val = `<div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%);"><div style="text-align:left; line-height:0.95; white-space:nowrap;">${l1}<br/>${l2}</div></div>`;
           fs = getNameFontSize("12345678", state.selectedFont);
-          pad = getNamePadding("12345678");
+          pad = "0";
           ws = 'normal'; align = 'center'; alignLast = 'auto';
         } else {
           fs = getNameFontSize(val, state.selectedFont);
@@ -960,9 +957,9 @@ const renderPrintView = () => {
         if (state.longNameMode === 'wrap' && val.length >= 11) {
           let l1 = val.substring(0, 10);
           let l2 = val.substring(10);
-          val = `<div style="display:flex; align-items:center; justify-content:center; height:0px;"><div style="text-align:left; line-height:0.95; white-space:nowrap;">${l1}<br/>${l2}</div></div>`;
+          val = `<div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%);"><div style="text-align:left; line-height:0.95; white-space:nowrap;">${l1}<br/>${l2}</div></div>`;
           fs = getKanaFontSize("1234567890");
-          pad = getKanaPadding("1234567890");
+          pad = "0";
           ws = 'normal'; align = 'center'; alignLast = 'auto';
         } else {
           fs = getKanaFontSize(val);
