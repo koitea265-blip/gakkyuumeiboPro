@@ -135,6 +135,7 @@ const getNameFontSize = (name = "", font = "") => {
   const baseSize = isKyo ? 12 : 11;
   const len = name.length;
   if (len <= 6) return baseSize + "px";
+  // A4用紙の描画領域から算出した氏名列(14%)の安全幅(px)
   const maxWidth = 80; 
   const calculatedSize = maxWidth / len;
   return Math.min(baseSize, calculatedSize).toFixed(1) + "px";
@@ -144,6 +145,7 @@ const getKanaFontSize = (kana = "") => {
   const baseSize = 11;
   const len = kana.length;
   if (len <= 8) return baseSize + "px";
+  // ふりがな列(17%)の安全幅(px)
   const maxWidth = 100; 
   const calculatedSize = maxWidth / len;
   return Math.min(baseSize, calculatedSize).toFixed(1) + "px";
@@ -385,7 +387,7 @@ window.handleExportHTML = () => {
   .cell-border { border: 1px solid #000; }
   .thick-right { border-right: 2.5px solid #000 !important; }
   .thick-left { border-left: 2.5px solid #000 !important; }
-  tbody tr { height: auto; }
+  tbody tr { height: 1px; }
   .justify-style { text-align: justify; text-align-last: justify; text-justify: inter-character; }
   .gender-style { text-align: center; white-space: nowrap; font-size: 11px; padding: 0 !important; }
   .text-center { text-align: center; }
@@ -594,7 +596,7 @@ window.handleExportHTML = () => {
             if (longNameMode === 'wrap' && v.length >= 9) {
               let l1 = v.substring(0, 8);
               let l2 = v.substring(8);
-              v = '<div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); text-align:left; line-height:0.95; white-space:nowrap;">' + l1 + '<br/>' + l2 + '</div>';
+              v = '<div style="display:flex; align-items:center; justify-content:center; height:0px;"><div style="text-align:left; line-height:0.95; white-space:nowrap;">' + l1 + '<br/>' + l2 + '</div></div>';
               fs = getNameFontSize("12345678", fontK);
               pad = getNamePadding("12345678");
               ws = 'normal'; align = 'center'; alignLast = 'auto';
@@ -606,7 +608,7 @@ window.handleExportHTML = () => {
             if (longNameMode === 'wrap' && v.length >= 11) {
               let l1 = v.substring(0, 10);
               let l2 = v.substring(10);
-              v = '<div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); text-align:left; line-height:0.95; white-space:nowrap;">' + l1 + '<br/>' + l2 + '</div>';
+              v = '<div style="display:flex; align-items:center; justify-content:center; height:0px;"><div style="text-align:left; line-height:0.95; white-space:nowrap;">' + l1 + '<br/>' + l2 + '</div></div>';
               fs = getKanaFontSize("1234567890");
               pad = getKanaPadding("1234567890");
               ws = 'normal'; align = 'center'; alignLast = 'auto';
@@ -616,8 +618,7 @@ window.handleExportHTML = () => {
             }
           }
         }
-        let extraStyle = ws === 'normal' ? ' position:relative;' : '';
-        h += '<td class="cell-border ' + (c.s&&ws==='nowrap'?'justify-style':'') + ' ' + (i===bc.length-1?'thick-right':'') + '" style="font-size:' + fs + '; padding:' + pad + '; white-space:' + ws + '; text-align:' + align + '; text-align-last:' + alignLast + ';' + extraStyle + '">' + v + '</td>';
+        h += '<td class="cell-border ' + (c.s&&ws==='nowrap'?'justify-style':'') + ' ' + (i===bc.length-1?'thick-right':'') + '" style="font-size:' + fs + '; padding:' + pad + '; white-space:' + ws + '; text-align:' + align + '; text-align-last:' + alignLast + ';">' + v + '</td>';
       });
       for(let i=0; i<ic; i++) h += '<td class="cell-border ' + ((i+1)%step===0 || (i+1)===ic?'thick-right':'') + '"></td>';
       h += '</tr>';
@@ -947,7 +948,7 @@ const renderPrintView = () => {
         if (state.longNameMode === 'wrap' && val.length >= 9) {
           let l1 = val.substring(0, 8);
           let l2 = val.substring(8);
-          val = `<div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); text-align:left; line-height:0.95; white-space:nowrap;">${l1}<br/>${l2}</div>`;
+          val = `<div style="display:flex; align-items:center; justify-content:center; height:0px;"><div style="text-align:left; line-height:0.95; white-space:nowrap;">${l1}<br/>${l2}</div></div>`;
           fs = getNameFontSize("12345678", state.selectedFont);
           pad = getNamePadding("12345678");
           ws = 'normal'; align = 'center'; alignLast = 'auto';
@@ -959,7 +960,7 @@ const renderPrintView = () => {
         if (state.longNameMode === 'wrap' && val.length >= 11) {
           let l1 = val.substring(0, 10);
           let l2 = val.substring(10);
-          val = `<div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); text-align:left; line-height:0.95; white-space:nowrap;">${l1}<br/>${l2}</div>`;
+          val = `<div style="display:flex; align-items:center; justify-content:center; height:0px;"><div style="text-align:left; line-height:0.95; white-space:nowrap;">${l1}<br/>${l2}</div></div>`;
           fs = getKanaFontSize("1234567890");
           pad = getKanaPadding("1234567890");
           ws = 'normal'; align = 'center'; alignLast = 'auto';
