@@ -19,14 +19,16 @@
   } 
   .animate-fade-in { animation: fade-in 0.3s ease-out forwards; } 
   @keyframes fade-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; border: 2.5px solid #000 !important; height: 100%; }
+  table th, table td { vertical-align: middle !important; }
   .cell-border { border: 1px solid #000 !important; }
   .thick-right { border-right: 2.5px solid #000 !important; }
   .thick-left { border-left: 2.5px solid #000 !important; }
+  tbody tr { height: 1px; }
   .justify-style {
     text-align: justify;
     text-align-last: justify;
     text-justify: inter-character;
-    white-space: nowrap;
   }
   ::-webkit-scrollbar { width: 10px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -130,15 +132,35 @@ const FONT_FAMILIES = {
 
 const getNameFontSize = (name = "", font = "") => {
   const isKyo = font === 'kyokasho';
-  if (name.length > 10) return "8px";
-  if (name.length > 7) return isKyo ? "10px" : "9px"; 
-  return isKyo ? "12px" : "11px";
+  const baseSize = isKyo ? 12 : 11;
+  const len = name.length;
+  if (len <= 6) return baseSize + "px";
+  const maxWidth = 80; 
+  const calculatedSize = maxWidth / len;
+  return Math.min(baseSize, calculatedSize).toFixed(1) + "px";
 };
 
 const getKanaFontSize = (kana = "") => {
-  if (kana.length > 11) return "7px";
-  if (kana.length > 8) return "9px"; 
-  return "11px";
+  const baseSize = 11;
+  const len = kana.length;
+  if (len <= 8) return baseSize + "px";
+  const maxWidth = 100; 
+  const calculatedSize = maxWidth / len;
+  return Math.min(baseSize, calculatedSize).toFixed(1) + "px";
+};
+
+const getNamePadding = (name = "") => {
+  const len = name.length;
+  if (len > 8) return "0";
+  if (len > 6) return "0 0.2em";
+  return "0 1.2em";
+};
+
+const getKanaPadding = (kana = "") => {
+  const len = kana.length;
+  if (len > 10) return "0";
+  if (len > 8) return "0 0.2em";
+  return "0 1.2em";
 };
 
 const toAlphaClass = (num) => String.fromCharCode(64 + parseInt(num));
@@ -167,9 +189,11 @@ const generateDummyTSV = () => {
       const isBoy = i % 2 === 0;
       const f = firsts[i % 10];
       const sIndex = Math.floor(i / 3);
+      // 確認用に15人に1人、長いデータを作成する
+      const extra = i % 15 === 0 ? "あいうえおかき" : "";
       classStudents.push({
-        name: `${surnames[sIndex]}\u3000${f.k}`,
-        kana: `${surKanas[sIndex]}\u3000${f.r}`,
+        name: `${surnames[sIndex]}\u3000${f.k}${extra}`,
+        kana: `${surKanas[sIndex]}\u3000${f.r}${extra}`,
         gender: isBoy ? "男" : "女"
       });
     }
@@ -202,11 +226,36 @@ let state = {
   showPMember: false,
   evalShowExchange: true,
   selectedFont: 'gothic',
+  longNameMode: 'shrink',
   schoolName: '○○小学校',
   grade: '1',
   teachers: {},
   tsvData: generateDummyTSV(),
   additionalData: {}
+};
+
+// --- Local Storage Management ---
+const STORAGE_KEY = 'gakkyuMeiboProState_v1';
+let saveTimeout;
+
+const saveToLocalStorage = () => {
+  clearTimeout(saveTimeout);
+  // 500msの遅延実行により、タイピング中の連続書き込み負荷を防止
+  saveTimeout = setTimeout(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }, 500);
+};
+
+const loadFromLocalStorage = () => {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      state = { ...state, ...parsed }; // 既存のstate構造を保護しつつ上書き
+    } catch (e) {
+      console.error('Failed to parse local storage data', e);
+    }
+  }
 };
 
 // --- Computed Properties ---
@@ -250,6 +299,7 @@ window.closeHelpModal = () => document.getElementById('helpModal').classList.add
 const setActiveTab = (tabId) => {
   state.activeTab = tabId;
   if (tabId === 'evaluation') state.showPMember = false;
+  saveToLocalStorage();
   renderApp();
 };
 
@@ -259,6 +309,7 @@ const triggerFileInput = () => document.getElementById('fileInput').click();
 window.addClass = () => {
   const nextId = String(state.classIds.length + 1);
   state.classIds.push(nextId);
+  saveToLocalStorage();
   showMessage('クラスを追加しました');
   renderApp();
 };
@@ -267,24 +318,26 @@ window.removeClass = (id) => {
   if (state.classIds.length <= 1) return;
   state.classIds = state.classIds.filter(cid => cid !== id);
   if (state.selectedClass === id) state.selectedClass = state.classIds[0];
+  saveToLocalStorage();
   showMessage('クラスを削除しました');
   renderApp();
 };
 
 window.clearTsvData = () => {
   state.tsvData = "組\tNo.\t氏名\tふりがな\t性別\n";
+  saveToLocalStorage();
   showMessage('入力データを一括削除しました');
   renderApp();
 };
 
 window.handleExportJSON = () => {
   const data = { ...state };
-  delete data.activeTab;
+  delete data.activeTab; // エクスポート時にはタブ状態は含めない
   const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a'); a.href = url; a.download = '名簿データ.json'; a.click();
   URL.revokeObjectURL(url);
-  showMessage('設定を保存しました');
+  showMessage('ファイルとして保存しました');
 };
 
 window.handleImportJSON = (e) => {
@@ -295,7 +348,8 @@ window.handleImportJSON = (e) => {
     try {
       const data = JSON.parse(event.target.result);
       Object.assign(state, data);
-      showMessage('設定を復元しました');
+      saveToLocalStorage();
+      showMessage('ファイルから復元しました');
       renderApp();
     } catch (err) { showMessage('読み込みに失敗しました'); }
   };
@@ -309,7 +363,7 @@ window.handleExportHTML = () => {
     additionalData: state.additionalData, classIds: state.classIds, classFormat: state.classFormat, 
     normalColsCount: state.normalColsCount, evalColsPerCategory: state.evalColsPerCategory, 
     bottomRowCount: state.bottomRowCount, selectedFont: state.selectedFont, 
-    options: { showFurigana: state.showFurigana, showGender: state.showGender, showGenderCount: state.showGenderCount, showPMember: state.showPMember, evalShowExchange: state.evalShowExchange }
+    options: { showFurigana: state.showFurigana, showGender: state.showGender, showGenderCount: state.showGenderCount, showPMember: state.showPMember, evalShowExchange: state.evalShowExchange, longNameMode: state.longNameMode }
   };
   
   const htmlContent = `<!DOCTYPE html>
@@ -327,11 +381,12 @@ window.handleExportHTML = () => {
     #canvas { padding: 0 !important; box-shadow: none !important; border: none !important; margin: 0 !important; width: 100% !important; }
   }
   table { width: 100%; border-collapse: collapse; table-layout: fixed; border: 2.5px solid #000 !important; height: 100%; }
+  table th, table td { vertical-align: middle !important; }
   .cell-border { border: 1px solid #000; }
   .thick-right { border-right: 2.5px solid #000 !important; }
   .thick-left { border-left: 2.5px solid #000 !important; }
-  tbody tr { height: auto; }
-  .justify-style { text-align: justify; text-align-last: justify; text-justify: inter-character; white-space: nowrap; padding: 0 1.2em !important; }
+  tbody tr { height: 1px; }
+  .justify-style { text-align: justify; text-align-last: justify; text-justify: inter-character; }
   .gender-style { text-align: center; white-space: nowrap; font-size: 11px; padding: 0 !important; }
   .text-center { text-align: center; }
   select { color: #000 !important; font-weight: bold; cursor: pointer; }
@@ -339,9 +394,9 @@ window.handleExportHTML = () => {
 </style>
 </head>
 <body class="bg-slate-50 font-sans text-slate-800">
-  <div class="print:hidden sticky top-0 z-50 bg-slate-900 text-white p-5 shadow-xl border-b border-white/10 font-bold flex flex-wrap items-center gap-8">
-    <h1 class="text-xl font-black tracking-tight border-r border-white/20 pr-6">学級名簿 Pro</h1>
-    <div class="flex items-center gap-3">
+  <div class="print:hidden sticky top-0 z-50 bg-slate-900 text-white p-5 shadow-xl border-b border-white/10 font-bold flex flex-wrap items-center gap-6">
+    <h1 class="text-xl font-black tracking-tight border-r border-white/20 pr-4">学級名簿 Pro</h1>
+    <div class="flex items-center gap-2">
       <select id="classSel" class="bg-white text-slate-900 text-sm border-2 p-2.5 rounded-lg font-black" onchange="update()"></select>
       <select id="typeSel" class="bg-white text-slate-900 text-sm border-2 p-2.5 rounded-lg font-black" onchange="update()">
         <option value="exchange">交流あり</option><option value="no_exchange">交流なし</option><option value="evaluation">評価用</option>
@@ -349,68 +404,114 @@ window.handleExportHTML = () => {
       <select id="fontSel" class="bg-white text-slate-900 text-sm border-2 p-2.5 rounded-lg font-black" onchange="update()">
         <option value="gothic">ゴシック</option><option value="mincho">明朝</option><option value="maru">丸ゴシック</option><option value="kyokasho">教科書体</option>
       </select>
+      <select id="longNameModeSel" class="bg-white text-slate-900 text-sm border-2 p-2.5 rounded-lg font-black ml-2" onchange="update()">
+        <option value="shrink">長氏名: 自動縮小</option>
+        <option value="wrap">長氏名: 改行あり</option>
+      </select>
     </div>
-    <div class="flex items-center gap-6 text-sm ml-2">
-      <label id="furiLbl" class="flex items-center gap-2 cursor-pointer group">
+    <div class="flex items-center gap-4 text-sm ml-2">
+      <label id="furiLbl" class="flex items-center gap-1.5 cursor-pointer group">
         <div class="relative flex items-center">
           <input type="checkbox" id="furiChk" class="sr-only peer" checked onchange="update()">
-          <div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-blue-500 transition-colors shadow-inner"></div>
-          <div class="absolute left-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5 shadow-sm"></div>
+          <div class="w-9 h-5 bg-slate-700 rounded-full peer peer-checked:bg-blue-500 transition-colors shadow-inner"></div>
+          <div class="absolute left-1 w-3 h-3 bg-white rounded-full transition-transform peer-checked:translate-x-4 shadow-sm"></div>
         </div>
         <span class="font-bold text-slate-200 group-hover:text-white transition-colors">ふりがな</span>
       </label>
-      <label class="flex items-center gap-2 cursor-pointer group">
+      <label class="flex items-center gap-1.5 cursor-pointer group">
         <div class="relative flex items-center">
           <input type="checkbox" id="genChk" class="sr-only peer" checked onchange="update()">
-          <div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-blue-500 transition-colors shadow-inner"></div>
-          <div class="absolute left-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5 shadow-sm"></div>
+          <div class="w-9 h-5 bg-slate-700 rounded-full peer peer-checked:bg-blue-500 transition-colors shadow-inner"></div>
+          <div class="absolute left-1 w-3 h-3 bg-white rounded-full transition-transform peer-checked:translate-x-4 shadow-sm"></div>
         </div>
         <span class="font-bold text-slate-200 group-hover:text-white transition-colors">性別</span>
       </label>
-      <label class="flex items-center gap-2 cursor-pointer group">
+      <label class="flex items-center gap-1.5 cursor-pointer group">
+        <div class="relative flex items-center">
+          <input type="checkbox" id="pMemChk" class="sr-only peer" onchange="update()">
+          <div class="w-9 h-5 bg-slate-700 rounded-full peer peer-checked:bg-blue-500 transition-colors shadow-inner"></div>
+          <div class="absolute left-1 w-3 h-3 bg-white rounded-full transition-transform peer-checked:translate-x-4 shadow-sm"></div>
+        </div>
+        <span class="font-bold text-slate-200 group-hover:text-white transition-colors">P会員</span>
+      </label>
+      <label class="flex items-center gap-1.5 cursor-pointer group">
         <div class="relative flex items-center">
           <input type="checkbox" id="cntChk" class="sr-only peer" checked onchange="update()">
-          <div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-emerald-500 transition-colors shadow-inner"></div>
-          <div class="absolute left-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5 shadow-sm"></div>
+          <div class="w-9 h-5 bg-slate-700 rounded-full peer peer-checked:bg-emerald-500 transition-colors shadow-inner"></div>
+          <div class="absolute left-1 w-3 h-3 bg-white rounded-full transition-transform peer-checked:translate-x-4 shadow-sm"></div>
         </div>
         <span class="font-bold text-emerald-400 group-hover:text-emerald-300 transition-colors">人数計</span>
       </label>
-      <label id="evalBox" class="flex items-center gap-2 cursor-pointer group">
+      <label id="evalBox" class="flex items-center gap-1.5 cursor-pointer group">
         <div class="relative flex items-center">
           <input type="checkbox" id="evalExcChk" class="sr-only peer" checked onchange="update()">
-          <div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-rose-500 transition-colors shadow-inner"></div>
-          <div class="absolute left-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5 shadow-sm"></div>
+          <div class="w-9 h-5 bg-slate-700 rounded-full peer peer-checked:bg-rose-500 transition-colors shadow-inner"></div>
+          <div class="absolute left-1 w-3 h-3 bg-white rounded-full transition-transform peer-checked:translate-x-4 shadow-sm"></div>
         </div>
         <span class="font-bold text-rose-400 group-hover:text-rose-300 transition-colors">支援含</span>
       </label>
     </div>
-    <div class="flex items-center gap-4 ml-auto">
-      <div class="bg-emerald-600 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg">
-        <span class="text-xs">列:</span>
-        <button onclick="changeCol(1)" class="w-6 hover:bg-white/20 rounded text-lg font-black leading-none pb-0.5">＋</button>
-        <span id="colVal" class="w-6 text-center font-black">15</span>
-        <button onclick="changeCol(-1)" class="w-6 hover:bg-white/20 rounded text-lg font-black leading-none pb-0.5">－</button>
+    <div class="flex items-center gap-3 ml-auto">
+      <div class="bg-emerald-600 px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1 shadow-lg">
+        <span>列:</span>
+        <button onclick="changeCol(1)" class="w-5 hover:bg-white/20 rounded font-black pb-0.5">＋</button>
+        <span id="colVal" class="w-5 text-center font-black">15</span>
+        <button onclick="changeCol(-1)" class="w-5 hover:bg-white/20 rounded font-black pb-0.5">－</button>
       </div>
-      <div class="bg-blue-600 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg">
-        <span class="text-xs">行:</span>
-        <button onclick="changeRow(1)" class="w-6 hover:bg-white/20 rounded text-lg font-black leading-none pb-0.5">＋</button>
-        <span id="rowVal" class="w-5 text-center font-black">0</span>
-        <button onclick="changeRow(-1)" class="w-6 hover:bg-white/20 rounded text-lg font-black leading-none pb-0.5">－</button>
+      <div class="bg-blue-600 px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1 shadow-lg">
+        <span>行:</span>
+        <button onclick="changeRow(1)" class="w-5 hover:bg-white/20 rounded font-black pb-0.5">＋</button>
+        <span id="rowVal" class="w-4 text-center font-black">0</span>
+        <button onclick="changeRow(-1)" class="w-5 hover:bg-white/20 rounded font-black pb-0.5">－</button>
       </div>
-      <button onclick="window.print()" class="bg-white text-slate-900 px-8 py-3 rounded-xl text-sm font-black hover:bg-blue-400 hover:text-white transition-colors shadow-lg ml-2">印刷</button>
+      <button onclick="window.print()" class="bg-white text-slate-900 px-5 py-2.5 rounded-xl text-sm font-black hover:bg-blue-400 hover:text-white transition-colors shadow-lg ml-1">印刷</button>
     </div>
   </div>
   <div class="print-wrapper flex justify-center p-10 print:p-0 print:w-full">
-    <div id="canvas" class="bg-white pt-[15mm] pb-[15mm] pl-[20mm] pr-[10mm] print:p-0 print:border-none print:shadow-none print:w-full print:h-[266mm] print:m-0 border border-slate-300 shadow-2xl w-[210mm] h-[297mm] flex flex-col shrink-0 overflow-hidden text-slate-900"></div>
+    <div id="canvas" class="bg-white pt-[15mm] pb-[15mm] pl-[20mm] pr-[10mm] print:p-0 print:border-none print:shadow-none print:w-full print:h-[266mm] print:m-0 border border-slate-300 shadow-2xl w-[210mm] h-[297mm] flex flex-col shrink-0 text-slate-900"></div>
   </div>
 <script>
   const D = ${JSON.stringify(appData)};
   let rowCount = D.bottomRowCount, normalCols = D.normalColsCount, evalCols = D.evalColsPerCategory;
   const FONTS = ${JSON.stringify(FONT_FAMILIES)};
   
+  const getNameFontSize = (name = "", font = "") => {
+    const isKyo = font === 'kyokasho';
+    const baseSize = isKyo ? 12 : 11;
+    const len = name.length;
+    if (len <= 6) return baseSize + "px";
+    const maxWidth = 80; 
+    const calculatedSize = maxWidth / len;
+    return Math.min(baseSize, calculatedSize).toFixed(1) + "px";
+  };
+  
+  const getKanaFontSize = (kana = "") => {
+    const baseSize = 11;
+    const len = kana.length;
+    if (len <= 8) return baseSize + "px";
+    const maxWidth = 100; 
+    const calculatedSize = maxWidth / len;
+    return Math.min(baseSize, calculatedSize).toFixed(1) + "px";
+  };
+  
+  const getNamePadding = (name = "") => {
+    const len = name.length;
+    if (len > 8) return "0";
+    if (len > 6) return "0 0.2em";
+    return "0 1.2em";
+  };
+  
+  const getKanaPadding = (kana = "") => {
+    const len = kana.length;
+    if (len > 10) return "0";
+    if (len > 8) return "0 0.2em";
+    return "0 1.2em";
+  };
+
   // 初期値の反映
   document.getElementById('furiChk').checked = D.options.showFurigana;
   document.getElementById('genChk').checked = D.options.showGender;
+  document.getElementById('pMemChk').checked = D.options.showPMember;
   document.getElementById('cntChk').checked = D.options.showGenderCount;
   document.getElementById('evalExcChk').checked = D.options.evalShowExchange;
 
@@ -424,13 +525,13 @@ window.handleExportHTML = () => {
   function toAlpha(n) { return String.fromCharCode(64 + parseInt(n)); }
   function update() {
     const selC = document.getElementById('classSel').value, type = document.getElementById('typeSel').value, fontK = document.getElementById('fontSel').value;
+    const longNameMode = document.getElementById('longNameModeSel').value;
     const furiChk = document.getElementById('furiChk'), furiLbl = document.getElementById('furiLbl'), showCnt = document.getElementById('cntChk').checked;
     document.getElementById('canvas').style.fontFamily = FONTS[fontK];
     document.getElementById('rowVal').innerText = rowCount;
     document.getElementById('colVal').innerText = (type==='evaluation' ? evalCols : normalCols);
     document.getElementById('evalBox').style.display = (type==='evaluation' ? 'flex' : 'none');
     
-    // 評価用の場合はふりがなスイッチを無効化
     if(type==='evaluation') { 
       furiChk.disabled = true; 
       furiLbl.style.opacity = '0.4'; 
@@ -460,42 +561,70 @@ window.handleExportHTML = () => {
     }
     h += '</div><div>担任 <span style="display:inline-block; width:120px; border-bottom:1px solid #000; text-align:center">' + (D.teachers[selC] || '') + '</span></div></div>';
     
-    // テーブルコンテナ開始（フレックスで伸ばす領域）
-    h += '<div class="flex-1 mt-2 min-h-0 overflow-hidden">';
+    h += '<div class="flex-1 mt-2 min-h-0 pr-[2px] pb-[2px] overflow-visible">';
 
     let bc = [{ k: 'id', l: 'No.', w: '3.5%' }, { k: 'name', l: '氏名', w: '14%', s: true }];
     if (furiChk.checked && type !== 'evaluation') bc.push({ k: 'kana', l: 'ふりがな', w: '17%', s: true });
     if (document.getElementById('genChk').checked) bc.push({ k: 'gender', l: '性別', w: '4%' });
+    if (document.getElementById('pMemChk').checked && type !== 'evaluation') bc.push({ k: 'pMember', l: 'Ｐ', w: '4%', s: false });
     const ic = type === 'evaluation' ? evalCols * 3 : normalCols, step = type === 'evaluation' ? evalCols : 5;
     h += '<table><colgroup>';
     bc.forEach(c => h += '<col style="width:' + c.w + '">');
     for(let i=0; i<ic; i++) h += '<col style="width:auto">';
     h += '</colgroup><thead style="font-weight:bold">';
     if(type === 'evaluation') {
-       h += '<tr><th class="cell-border" style="border-top:2.2px solid #000" colspan="' + bc.length + '"></th>';
-       ['知識・技能','思考・判断・表現','主体的に取り組む態度'].forEach((t, i) => h += '<th class="cell-border text-center font-bold thick-right ' + (i===0?'thick-left':'') + '" style="font-size:10px; border-top:2.2px solid #000" colspan="' + evalCols + '">' + t + '</th>');
+       h += '<tr><th class="cell-border" style="border-top:2.5px solid #000" colspan="' + bc.length + '"></th>';
+       ['知識・技能','思考・判断・表現','主体的に取り組む態度'].forEach((t, i) => h += '<th class="cell-border text-center font-bold ' + (i===2?'thick-right':'thick-right') + ' ' + (i===0?'thick-left':'') + '" style="font-size:10px; border-top:2.5px solid #000" colspan="' + evalCols + '">' + t + '</th>');
        h += '</tr>';
     }
     h += '<tr>';
     bc.forEach((_, i) => h += '<th class="cell-border ' + (i===bc.length-1?'thick-right':'') + '" style="height:100px"></th>');
-    for(let i=0; i<ic; i++) h += '<th class="cell-border ' + ((i+1)%step===0||(i+1)===ic?'thick-right':'') + '" style="height:100px"></th>';
+    for(let i=0; i<ic; i++) h += '<th class="cell-border ' + ((i+1)%step===0 || (i+1)===ic?'thick-right':'') + '" style="height:100px"></th>';
     h += '</tr><tr class="bg-white text-center">';
-    bc.forEach((c, i) => h += '<th class="cell-border py-1 ' + (c.s?'justify-style':'text-center') + ' ' + (i===bc.length-1?'thick-right':'') + '" style="font-size:11px; padding:' + (c.s?'0 1.2em':'0') + '">' + c.l + '</th>');
-    for(let i=0; i<ic; i++) h += '<th class="cell-border py-1 text-center font-normal ' + ((i+1)%step===0||(i+1)===ic?'thick-right':'') + '" style="font-size:11px">/</th>';
+    bc.forEach((c, i) => h += '<th class="cell-border py-1 ' + (c.s?'justify-style':'text-center') + ' ' + (i===bc.length-1?'thick-right':'') + '" style="font-size:11px; padding:' + (c.s?'0 1.2em':'0') + '; white-space:nowrap;">' + c.l + '</th>');
+    for(let i=0; i<ic; i++) h += '<th class="cell-border py-1 text-center font-normal ' + ((i+1)%step===0 || (i+1)===ic?'thick-right':'') + '" style="font-size:11px">/</th>';
     h += '</tr></thead><tbody style="font-weight:normal">';
     const addR = (s, blk) => {
-      h += '<tr class="h-auto">';
+      h += '<tr>';
       bc.forEach((c, i) => {
         let v = blk ? '&nbsp;' : (c.k==='pMember'?(D.additionalData[selC+"_"+s.id]?.pMember?'〇':'&nbsp;'):s[c.k]);
-        h += '<td class="cell-border ' + (c.s?'justify-style':'text-center') + ' ' + (i===bc.length-1?'thick-right':'') + '" style="font-size:11px; padding:' + (c.s?'0 1.2em':'0') + '">' + v + '</td>';
+        let fs = '11px', pad = c.s ? '0 1.2em' : '0', ws = 'nowrap', align = c.s ? 'justify' : 'center', alignLast = c.s ? 'justify' : 'auto';
+        if (!blk) {
+          if (c.k === 'name') {
+            if (longNameMode === 'wrap' && v.length >= 9) {
+              let l1 = v.substring(0, 8);
+              let l2 = v.substring(8);
+              v = '<div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); text-align:left; line-height:0.95; white-space:nowrap;">' + l1 + '<br/>' + l2 + '</div>';
+              fs = getNameFontSize("12345678", fontK);
+              pad = getNamePadding("12345678");
+              ws = 'normal'; align = 'center'; alignLast = 'auto';
+            } else {
+              fs = getNameFontSize(v, fontK);
+              pad = getNamePadding(v);
+            }
+          } else if (c.k === 'kana') {
+            if (longNameMode === 'wrap' && v.length >= 11) {
+              let l1 = v.substring(0, 10);
+              let l2 = v.substring(10);
+              v = '<div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); text-align:left; line-height:0.95; white-space:nowrap;">' + l1 + '<br/>' + l2 + '</div>';
+              fs = getKanaFontSize("1234567890");
+              pad = getKanaPadding("1234567890");
+              ws = 'normal'; align = 'center'; alignLast = 'auto';
+            } else {
+              fs = getKanaFontSize(v);
+              pad = getKanaPadding(v);
+            }
+          }
+        }
+        let extraStyle = ws === 'normal' ? ' position:relative;' : '';
+        h += '<td class="cell-border ' + (c.s&&ws==='nowrap'?'justify-style':'') + ' ' + (i===bc.length-1?'thick-right':'') + '" style="font-size:' + fs + '; padding:' + pad + '; white-space:' + ws + '; text-align:' + align + '; text-align-last:' + alignLast + ';' + extraStyle + '">' + v + '</td>';
       });
-      for(let i=0; i<ic; i++) h += '<td class="cell-border ' + ((i+1)%step===0||(i+1)===ic?'thick-right':'') + '"></td>';
+      for(let i=0; i<ic; i++) h += '<td class="cell-border ' + ((i+1)%step===0 || (i+1)===ic?'thick-right':'') + '"></td>';
       h += '</tr>';
     };
     finalStudents.forEach(s => addR(s, false));
     for(let r=0; r<rowCount; r++) addR(null, true);
     
-    // テーブルとコンテナを閉じる
     h += '</tbody></table></div>';
     
     document.getElementById('canvas').innerHTML = h;
@@ -504,8 +633,8 @@ window.handleExportHTML = () => {
     const sel = document.getElementById('classSel');
     D.classIds.forEach(id => { const opt = document.createElement('option'); opt.value = id; opt.innerText = (D.classFormat==='alphabetic'?toAlpha(id):id)+'組'; sel.appendChild(opt); });
     
-    // フォント選択の初期化
     document.getElementById('fontSel').value = D.selectedFont;
+    document.getElementById('longNameModeSel').value = D.options.longNameMode || 'shrink';
 
     update();
   }
@@ -522,16 +651,19 @@ window.handleExportHTML = () => {
 // --- Input Handlers ---
 window.updateState = (key, value) => {
   state[key] = value;
-  renderApp(); // 簡易的に全体再描画
+  saveToLocalStorage();
+  renderApp();
 };
 
 window.updateInputState = (key, value) => {
   state[key] = value;
-  renderTopbar(); // 入力中はトップバーのみ更新してフォーカスを維持
+  saveToLocalStorage();
+  renderTopbar(); 
 };
 
 window.handleTeacherChange = (id, value) => {
   state.teachers[id] = value;
+  saveToLocalStorage();
   renderTopbar();
 };
 
@@ -539,7 +671,7 @@ window.handleInfoChange = (id, key, checked) => {
   const stateKey = `${state.selectedClass}_${id}`;
   if (!state.additionalData[stateKey]) state.additionalData[stateKey] = {};
   state.additionalData[stateKey][key] = checked;
-  // Info設定画面なら全体再描画でも問題ない（チェックボックスのため）
+  saveToLocalStorage();
   renderApp();
 };
 
@@ -549,6 +681,7 @@ window.changeSettingNumber = (key, delta) => {
   } else if (key === 'bottomRowCount') {
     state[key] = Math.max(0, state[key] + delta);
   }
+  saveToLocalStorage();
   renderApp();
 };
 
@@ -594,12 +727,11 @@ const renderTopbar = () => {
     const colsCount = isEval ? state.evalColsPerCategory : state.normalColsCount;
     const colsKey = isEval ? 'evalColsPerCategory' : 'normalColsCount';
     
-    // Toggle UI generator
     const createToggle = (id, label, isChecked, onChangeKey, isDisabled = false, activeColor = "peer-checked:bg-blue-600", textColor = "text-slate-600") => `
-      <label class="flex items-center gap-2 cursor-pointer group ${isDisabled ? 'opacity-40 cursor-not-allowed' : ''}">
+      <label class="flex items-center gap-1.5 cursor-pointer group ${isDisabled ? 'opacity-40 cursor-not-allowed' : ''}">
         <div class="relative flex items-center">
           <input type="checkbox" id="${id}" class="sr-only peer" ${isChecked ? 'checked' : ''} ${isDisabled ? 'disabled' : ''} onchange="updateState('${onChangeKey}', this.checked)">
-          <div class="w-10 h-6 bg-slate-300 rounded-full peer ${activeColor} transition-colors shadow-inner"></div>
+          <div class="w-9 h-5 bg-slate-300 rounded-full peer ${activeColor} transition-colors shadow-inner"></div>
           <div class="absolute left-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-4 shadow-sm"></div>
         </div>
         <span class="text-sm font-bold ${textColor} group-hover:text-slate-900 transition-colors">${label}</span>
@@ -607,11 +739,12 @@ const renderTopbar = () => {
     `;
 
     html += `
-      <div class="flex items-center gap-8">
-        <div class="flex items-center gap-5 border-r border-slate-200 pr-8">
+      <div class="flex items-center gap-6">
+        <div class="flex items-center gap-4 border-r border-slate-200 pr-6">
           ${createToggle('furiChk', 'ふりがな', state.showFurigana, 'showFurigana', isEval)}
           ${createToggle('genChk', '性別', state.showGender, 'showGender')}
-          ${createToggle('cntChk', '人数計', state.showGenderCount, 'showGenderCount', false, "peer-checked:bg-emerald-500", "text-blue-600")}
+          ${createToggle('pMemChk', 'P会員', state.showPMember, 'showPMember', isEval)}
+          ${createToggle('cntChk', '人数計', state.showGenderCount, 'showGenderCount', false, "peer-checked:bg-emerald-500", "text-emerald-600")}
         </div>
         <div class="flex items-center gap-3 font-black">
           <select onchange="updateState('selectedFont', this.value)" class="text-sm border-2 border-slate-100 rounded-xl px-4 py-2.5 font-black outline-none bg-white shadow-sm text-slate-900 cursor-pointer">
@@ -620,7 +753,11 @@ const renderTopbar = () => {
             <option value="maru" ${state.selectedFont === 'maru' ? 'selected' : ''}>丸ゴシック</option>
             <option value="kyokasho" ${state.selectedFont === 'kyokasho' ? 'selected' : ''}>教科書体</option>
           </select>
-          <div class="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-xl shadow-lg font-bold">
+          <select onchange="updateState('longNameMode', this.value)" class="text-sm border-2 border-slate-100 rounded-xl px-4 py-2.5 font-black outline-none bg-white shadow-sm text-slate-900 cursor-pointer ml-1">
+            <option value="shrink" ${state.longNameMode === 'shrink' ? 'selected' : ''}>長氏名: 自動縮小</option>
+            <option value="wrap" ${state.longNameMode === 'wrap' ? 'selected' : ''}>長氏名: 改行あり</option>
+          </select>
+          <div class="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-xl shadow-lg font-bold ml-2">
             <span class="text-[11px] font-black uppercase">列:</span>
             <button onclick="changeSettingNumber('${colsKey}', 1)" class="w-6 text-lg hover:bg-white/20 rounded font-black pb-0.5">＋</button>
             <span class="text-sm w-6 text-center font-black">${colsCount}</span>
@@ -698,7 +835,6 @@ const renderBasicSettings = () => {
 const renderInfoSettings = () => {
   const masterStudents = getMasterStudents();
   
-  // Custom toggle logic for Info Table
   const createInfoToggle = (id, key, isChecked, colorClass) => `
     <label class="relative inline-flex items-center cursor-pointer">
       <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="handleInfoChange('${id}', '${key}', this.checked)" class="sr-only peer" />
@@ -712,7 +848,7 @@ const renderInfoSettings = () => {
       <td class="py-2 px-4 text-center font-mono text-slate-400 text-base font-bold">${s.id}</td>
       <td class="py-2 px-4 font-black text-slate-700 text-base">${s.name}</td>
       <td class="py-2 px-4 text-center">${createInfoToggle(s.id, 'specialSupport', s.special, 'peer-checked:bg-blue-600')}</td>
-      <td class="py-2 px-4 text-center">${createInfoToggle(s.id, 'pMember', s.pMember, 'peer-checked:bg-rose-500')}</td>
+      <td class="py-2 px-4 text-center">${createInfoToggle(s.id, 'pMember', s.pMember, 'peer-checked:bg-blue-600')}</td>
     </tr>
   `).join('');
 
@@ -723,7 +859,7 @@ const renderInfoSettings = () => {
           <h2 class="text-xl font-black text-slate-800 flex items-center gap-4 font-bold font-black"><i data-lucide="settings" class="w-6 h-6 text-blue-600"></i> 個別設定 <span class="text-base font-bold text-slate-400">(${getClassLabel(state.selectedClass)})</span></h2>
         </div>
         <table class="w-full border-collapse font-black text-slate-900">
-          <thead><tr class="text-xs text-slate-400 font-bold"><th class="p-4 border-b text-center w-24">No.</th><th class="p-4 border-b text-left">児童氏名</th><th class="p-4 border-b text-center w-40 text-blue-600">特別支援</th><th class="p-4 border-b text-center w-40 text-rose-600">P会員</th></tr></thead>
+          <thead><tr class="text-xs text-slate-400 font-bold"><th class="p-4 border-b text-center w-24">No.</th><th class="p-4 border-b text-left">児童氏名</th><th class="p-4 border-b text-center w-40 text-blue-600">特別支援</th><th class="p-4 border-b text-center w-40 text-blue-600">P会員</th></tr></thead>
           <tbody>${tbodyHtml}</tbody>
         </table>
       </div>
@@ -743,12 +879,11 @@ const renderPrintView = () => {
   baseCols.push({ key: 'name', label: '氏名', w: '14%', s: true });
   if (hasFuri) baseCols.push({ key: 'kana', label: 'ふりがな', w: '17%', s: true });
   if (state.showGender) baseCols.push({ key: 'gender', label: '性別', w: '4%', c: true });
-  if (state.showPMember) baseCols.push({ key: 'pMember', label: 'P会員', w: '8%', c: true });
+  if (state.showPMember && !isEval) baseCols.push({ key: 'pMember', label: 'Ｐ', w: '4%', c: true });
   
   const icCount = isEval ? state.evalColsPerCategory * 3 : state.normalColsCount;
   const step = isEval ? state.evalColsPerCategory : 5;
 
-  // Header
   let headerHtml = `
     <div class="flex justify-between items-end text-slate-900 shrink-0 text-[12px] font-bold mb-1 font-black">
       <div>
@@ -771,8 +906,7 @@ const renderPrintView = () => {
     </div>
   `;
 
-  // Table structure
-  let tableHtml = `<table class="w-full h-full border-collapse border-2 border-black table-fixed leading-none"><colgroup>`;
+  let tableHtml = `<table class="w-full h-full border-collapse table-fixed leading-none"><colgroup>`;
   baseCols.forEach(c => tableHtml += `<col style="width: ${c.w}" />`);
   for(let i=0; i<icCount; i++) tableHtml += `<col style="width: auto" />`;
   tableHtml += `</colgroup><thead class="font-bold">`;
@@ -780,7 +914,7 @@ const renderPrintView = () => {
   if (isEval) {
     tableHtml += `<tr><th class="cell-border" style="border-top: 2.5px solid #000" colspan="${baseCols.length}"></th>`;
     ['知識・技能','思考・判断・表現','主体的に取り組む態度'].forEach((t, idx) => {
-      tableHtml += `<th class="cell-border py-1 text-[10px] text-center font-bold thick-right ${idx === 0 ? 'thick-left' : ''}" style="border-top: 2.5px solid #000" colspan="${state.evalColsPerCategory}">${t}</th>`;
+      tableHtml += `<th class="cell-border py-1 text-[10px] text-center font-bold ${idx === 2 ? 'thick-right' : 'thick-right'} ${idx === 0 ? 'thick-left' : ''}" style="border-top: 2.5px solid #000" colspan="${state.evalColsPerCategory}">${t}</th>`;
     });
     tableHtml += `</tr>`;
   }
@@ -793,24 +927,50 @@ const renderPrintView = () => {
   baseCols.forEach((c, i) => {
     const fs = (isKyo && c.key === 'name') ? '12px' : '11px';
     const align = c.s ? 'justify' : 'center';
-    tableHtml += `<th class="cell-border py-1 ${i === baseCols.length - 1 ? 'thick-right' : ''}" style="font-size: ${fs}; padding: ${c.s ? '0 1.2em' : '0'}; text-align: ${align}; text-align-last: ${align}">${c.label}</th>`;
+    tableHtml += `<th class="cell-border py-1 ${i === baseCols.length - 1 ? 'thick-right' : ''}" style="font-size: ${fs}; padding: ${c.s ? '0 1.2em' : '0'}; text-align: ${align}; text-align-last: ${align}; white-space: nowrap;">${c.label}</th>`;
   });
   for(let i=0; i<icCount; i++) {
-    tableHtml += `<th class="cell-border py-1 font-normal ${(i + 1) % step === 0 || (i + 1) === icCount ? 'thick-right' : ''}" style="font-size: 11px">/</th>`;
+    tableHtml += `<th class="cell-border py-1 text-center font-normal ${(i + 1) % step === 0 || (i + 1) === icCount ? 'thick-right' : ''}" style="font-size: 11px">/</th>`;
   }
   tableHtml += `</tr></thead><tbody class="h-full font-normal">`;
 
-  // Body rows
   displayedStudents.forEach((s, idx) => {
-    tableHtml += `<tr class="h-auto">`;
+    tableHtml += `<tr>`;
     baseCols.forEach((c, ci) => {
       let val = s[c.key] || '';
       if (c.key === 'pMember') {
         val = state.additionalData[`${state.selectedClass}_${s.id}`]?.pMember ? '〇' : '';
       }
-      const fs = c.key === 'name' ? getNameFontSize(val, state.selectedFont) : (c.key === 'kana' ? getKanaFontSize(val) : "11px");
-      const align = c.s ? 'justify' : 'center';
-      tableHtml += `<td class="cell-border px-1 whitespace-nowrap overflow-hidden ${ci === baseCols.length - 1 ? 'thick-right' : ''}" style="font-size: ${fs}; padding: ${c.s ? '0 1.2em' : '0'}; text-align: ${align}; text-align-last: ${align}">${val}</td>`;
+      
+      let fs = "11px", pad = c.s ? '0 1.2em' : '0', ws = 'nowrap', align = c.s ? 'justify' : 'center', alignLast = c.s ? 'justify' : 'auto';
+      if (c.key === 'name') {
+        if (state.longNameMode === 'wrap' && val.length >= 9) {
+          let l1 = val.substring(0, 8);
+          let l2 = val.substring(8);
+          val = `<div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); text-align:left; line-height:0.95; white-space:nowrap;">${l1}<br/>${l2}</div>`;
+          fs = getNameFontSize("12345678", state.selectedFont);
+          pad = getNamePadding("12345678");
+          ws = 'normal'; align = 'center'; alignLast = 'auto';
+        } else {
+          fs = getNameFontSize(val, state.selectedFont);
+          pad = getNamePadding(val);
+        }
+      } else if (c.key === 'kana') {
+        if (state.longNameMode === 'wrap' && val.length >= 11) {
+          let l1 = val.substring(0, 10);
+          let l2 = val.substring(10);
+          val = `<div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); text-align:left; line-height:0.95; white-space:nowrap;">${l1}<br/>${l2}</div>`;
+          fs = getKanaFontSize("1234567890");
+          pad = getKanaPadding("1234567890");
+          ws = 'normal'; align = 'center'; alignLast = 'auto';
+        } else {
+          fs = getKanaFontSize(val);
+          pad = getKanaPadding(val);
+        }
+      }
+      
+      let extraStyle = ws === 'normal' ? ' position:relative;' : '';
+      tableHtml += `<td class="cell-border px-1 overflow-hidden ${c.s&&ws==='nowrap'?'justify-style':''} ${ci === baseCols.length - 1 ? 'thick-right' : ''}" style="font-size: ${fs}; padding: ${pad}; white-space: ${ws}; text-align: ${align}; text-align-last: ${alignLast};${extraStyle}">${val}</td>`;
     });
     for(let i=0; i<icCount; i++) {
       tableHtml += `<td class="cell-border ${(i + 1) % step === 0 || (i + 1) === icCount ? 'thick-right' : ''}">\u00a0</td>`;
@@ -818,9 +978,8 @@ const renderPrintView = () => {
     tableHtml += `</tr>`;
   });
 
-  // Empty rows
   for(let rIdx=0; rIdx<state.bottomRowCount; rIdx++) {
-    tableHtml += `<tr class="h-auto">`;
+    tableHtml += `<tr>`;
     baseCols.forEach((c, ci) => tableHtml += `<td class="cell-border ${ci === baseCols.length - 1 ? 'thick-right' : ''}">\u00a0</td>`);
     for(let i=0; i<icCount; i++) tableHtml += `<td class="cell-border ${(i + 1) % step === 0 || (i + 1) === icCount ? 'thick-right' : ''}">\u00a0</td>`;
     tableHtml += `</tr>`;
@@ -830,9 +989,9 @@ const renderPrintView = () => {
 
   return `
     <div id="print-container" class="flex justify-center w-full print:w-full print:p-0">
-      <div id="print-area" class="w-[210mm] h-[297mm] bg-white pt-[15mm] pb-[15mm] pl-[20mm] pr-[10mm] border border-slate-300 shadow-2xl flex flex-col shrink-0 overflow-hidden font-black text-slate-900 print:w-full print:h-[266mm] print:p-0 print:border-none print:shadow-none print:m-0" style="font-family: ${FONT_FAMILIES[state.selectedFont]}">
+      <div id="print-area" class="w-[210mm] h-[297mm] bg-white pt-[15mm] pb-[15mm] pl-[20mm] pr-[10mm] border border-slate-300 shadow-2xl flex flex-col shrink-0 font-black text-slate-900 print:w-full print:h-[266mm] print:p-0 print:border-none print:shadow-none print:m-0" style="font-family: ${FONT_FAMILIES[state.selectedFont]}">
         ${headerHtml}
-        <div class="flex-1 mt-2 min-h-0 overflow-hidden">
+        <div class="flex-1 mt-2 min-h-0 pr-[2px] pb-[2px] overflow-visible">
           ${tableHtml}
         </div>
       </div>
@@ -856,6 +1015,7 @@ const renderApp = () => {
 
 // --- Initialization ---
 window.onload = () => {
+  loadFromLocalStorage();
   renderApp();
 };
 </script>
