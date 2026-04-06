@@ -79,7 +79,7 @@
           <ul class="list-disc list-inside space-y-2 text-sm ml-2 leading-relaxed mt-3 text-slate-500">
             <li>データはタブ区切り（Excelからのコピー標準状態）で認識されます。</li>
             <li>1行目は見出し行として扱われ、データ本体は2行目から読み込まれます。</li>
-            <li>不足している列がある場合、tその行は無視されます。</li>
+            <li>不足している列がある場合、その行は無視されます。</li>
           </ul>
         </section>
       </div>
@@ -189,6 +189,7 @@ const generateDummyTSV = () => {
       const isBoy = i % 2 === 0;
       const f = firsts[i % 10];
       const sIndex = Math.floor(i / 3);
+      // 確認用に15人に1人、長いデータを作成する
       const extra = i % 15 === 0 ? "あいうえおかき" : "";
       classStudents.push({
         name: `${surnames[sIndex]}\u3000${f.k}${extra}`,
@@ -239,6 +240,7 @@ let saveTimeout;
 
 const saveToLocalStorage = () => {
   clearTimeout(saveTimeout);
+  // 500msの遅延実行により、タイピング中の連続書き込み負荷を防止
   saveTimeout = setTimeout(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, 500);
@@ -249,7 +251,7 @@ const loadFromLocalStorage = () => {
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
-      state = { ...state, ...parsed };
+      state = { ...state, ...parsed }; // 既存のstate構造を保護しつつ上書き
     } catch (e) {
       console.error('Failed to parse local storage data', e);
     }
@@ -330,7 +332,7 @@ window.clearTsvData = () => {
 
 window.handleExportJSON = () => {
   const data = { ...state };
-  delete data.activeTab;
+  delete data.activeTab; // エクスポート時にはタブ状態は含めない
   const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a'); a.href = url; a.download = '名簿データ.json'; a.click();
@@ -592,7 +594,7 @@ window.handleExportHTML = () => {
             if (longNameMode === 'wrap' && v.length >= 9) {
               let l1 = v.substring(0, 8);
               let l2 = v.substring(8);
-              v = '<div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%);"><div style="text-align:left; line-height:0.95; white-space:nowrap;">' + l1 + '<br/>' + l2 + '</div></div>';
+              v = '<div style="position:absolute; top:0; left:0; right:0; bottom:0; display:flex; align-items:center; justify-content:center;"><div style="text-align:left; line-height:0.95; white-space:nowrap;">' + l1 + '<br/>' + l2 + '</div></div>';
               fs = getNameFontSize("12345678", fontK);
               pad = "0";
               ws = 'normal'; align = 'center'; alignLast = 'auto';
@@ -604,7 +606,7 @@ window.handleExportHTML = () => {
             if (longNameMode === 'wrap' && v.length >= 11) {
               let l1 = v.substring(0, 10);
               let l2 = v.substring(10);
-              v = '<div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%);"><div style="text-align:left; line-height:0.95; white-space:nowrap;">' + l1 + '<br/>' + l2 + '</div></div>';
+              v = '<div style="position:absolute; top:0; left:0; right:0; bottom:0; display:flex; align-items:center; justify-content:center;"><div style="text-align:left; line-height:0.95; white-space:nowrap;">' + l1 + '<br/>' + l2 + '</div></div>';
               fs = getKanaFontSize("1234567890");
               pad = "0";
               ws = 'normal'; align = 'center'; alignLast = 'auto';
@@ -945,7 +947,7 @@ const renderPrintView = () => {
         if (state.longNameMode === 'wrap' && val.length >= 9) {
           let l1 = val.substring(0, 8);
           let l2 = val.substring(8);
-          val = `<div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%);"><div style="text-align:left; line-height:0.95; white-space:nowrap;">${l1}<br/>${l2}</div></div>`;
+          val = `<div style="position:absolute; top:0; left:0; right:0; bottom:0; display:flex; align-items:center; justify-content:center;"><div style="text-align:left; line-height:0.95; white-space:nowrap;">${l1}<br/>${l2}</div></div>`;
           fs = getNameFontSize("12345678", state.selectedFont);
           pad = "0";
           ws = 'normal'; align = 'center'; alignLast = 'auto';
@@ -957,7 +959,7 @@ const renderPrintView = () => {
         if (state.longNameMode === 'wrap' && val.length >= 11) {
           let l1 = val.substring(0, 10);
           let l2 = val.substring(10);
-          val = `<div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%);"><div style="text-align:left; line-height:0.95; white-space:nowrap;">${l1}<br/>${l2}</div></div>`;
+          val = `<div style="position:absolute; top:0; left:0; right:0; bottom:0; display:flex; align-items:center; justify-content:center;"><div style="text-align:left; line-height:0.95; white-space:nowrap;">${l1}<br/>${l2}</div></div>`;
           fs = getKanaFontSize("1234567890");
           pad = "0";
           ws = 'normal'; align = 'center'; alignLast = 'auto';
