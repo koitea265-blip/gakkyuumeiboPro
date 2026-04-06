@@ -108,7 +108,7 @@
   <!-- Main Content -->
   <main class="flex-1 overflow-y-auto flex flex-col bg-[#f0f4f9] font-bold relative">
     <!-- Topbar -->
-    <div id="topbar" class="sticky top-0 bg-white/80 backdrop-blur-xl border-b border-slate-200 p-5 px-8 z-40 flex justify-between items-center print:hidden shadow-sm font-black">
+    <div id="topbar" class="sticky top-0 bg-white/80 backdrop-blur-xl border-b border-slate-200 p-3 px-6 z-40 flex justify-between items-center print:hidden shadow-sm font-black overflow-x-auto custom-scrollbar">
       <!-- Topbar content rendered via JS -->
     </div>
 
@@ -226,7 +226,7 @@ let state = {
   showPMember: false,
   evalShowExchange: true,
   selectedFont: 'gothic',
-  longNameMode: 'shrink',
+  longNameMode: 'shrink', // 'shrink' または 'wrap'
   schoolName: '○○小学校',
   grade: '1',
   teachers: {},
@@ -385,7 +385,7 @@ window.handleExportHTML = () => {
   .cell-border { border: 1px solid #000; }
   .thick-right { border-right: 2.5px solid #000 !important; }
   .thick-left { border-left: 2.5px solid #000 !important; }
-  tbody tr { height: 1px; }
+  tbody tr { height: auto; }
   .justify-style { text-align: justify; text-align-last: justify; text-justify: inter-character; }
   .gender-style { text-align: center; white-space: nowrap; font-size: 11px; padding: 0 !important; }
   .text-center { text-align: center; }
@@ -394,77 +394,77 @@ window.handleExportHTML = () => {
 </style>
 </head>
 <body class="bg-slate-50 font-sans text-slate-800">
-  <div class="print:hidden sticky top-0 z-50 bg-slate-900 text-white p-5 shadow-xl border-b border-white/10 font-bold flex flex-wrap items-center gap-6">
-    <h1 class="text-xl font-black tracking-tight border-r border-white/20 pr-4">学級名簿 Pro</h1>
-    <div class="flex items-center gap-2">
-      <select id="classSel" class="bg-white text-slate-900 text-sm border-2 p-2.5 rounded-lg font-black" onchange="update()"></select>
-      <select id="typeSel" class="bg-white text-slate-900 text-sm border-2 p-2.5 rounded-lg font-black" onchange="update()">
+  <div class="print:hidden sticky top-0 z-50 bg-slate-900 text-white p-3 shadow-xl border-b border-white/10 font-bold flex items-center gap-4 overflow-x-auto whitespace-nowrap">
+    <h1 class="text-lg font-black tracking-tight border-r border-white/20 pr-3 shrink-0">学級名簿 Pro</h1>
+    <div class="flex items-center gap-2 shrink-0">
+      <select id="classSel" class="bg-white text-slate-900 text-xs border-2 p-1.5 rounded-lg font-black" onchange="update()"></select>
+      <select id="typeSel" class="bg-white text-slate-900 text-xs border-2 p-1.5 rounded-lg font-black" onchange="update()">
         <option value="exchange">交流あり</option><option value="no_exchange">交流なし</option><option value="evaluation">評価用</option>
       </select>
-      <select id="fontSel" class="bg-white text-slate-900 text-sm border-2 p-2.5 rounded-lg font-black" onchange="update()">
+      <select id="fontSel" class="bg-white text-slate-900 text-xs border-2 p-1.5 rounded-lg font-black" onchange="update()">
         <option value="gothic">ゴシック</option><option value="mincho">明朝</option><option value="maru">丸ゴシック</option><option value="kyokasho">教科書体</option>
       </select>
-      <select id="longNameModeSel" class="bg-white text-slate-900 text-sm border-2 p-2.5 rounded-lg font-black ml-2" onchange="update()">
+      <select id="longNameModeSel" class="bg-white text-slate-900 text-xs border-2 p-1.5 rounded-lg font-black" onchange="update()">
         <option value="shrink">長氏名: 自動縮小</option>
         <option value="wrap">長氏名: 改行あり</option>
       </select>
     </div>
-    <div class="flex items-center gap-4 text-sm ml-2">
-      <label id="furiLbl" class="flex items-center gap-1.5 cursor-pointer group">
+    <div class="flex items-center gap-3 text-xs shrink-0">
+      <label id="furiLbl" class="flex items-center gap-1 cursor-pointer group">
         <div class="relative flex items-center">
           <input type="checkbox" id="furiChk" class="sr-only peer" checked onchange="update()">
-          <div class="w-9 h-5 bg-slate-700 rounded-full peer peer-checked:bg-blue-500 transition-colors shadow-inner"></div>
-          <div class="absolute left-1 w-3 h-3 bg-white rounded-full transition-transform peer-checked:translate-x-4 shadow-sm"></div>
+          <div class="w-7 h-4 bg-slate-700 rounded-full peer peer-checked:bg-blue-500 transition-colors shadow-inner"></div>
+          <div class="absolute left-0.5 w-3 h-3 bg-white rounded-full transition-transform peer-checked:translate-x-3 shadow-sm"></div>
         </div>
         <span class="font-bold text-slate-200 group-hover:text-white transition-colors">ふりがな</span>
       </label>
-      <label class="flex items-center gap-1.5 cursor-pointer group">
+      <label class="flex items-center gap-1 cursor-pointer group">
         <div class="relative flex items-center">
           <input type="checkbox" id="genChk" class="sr-only peer" checked onchange="update()">
-          <div class="w-9 h-5 bg-slate-700 rounded-full peer peer-checked:bg-blue-500 transition-colors shadow-inner"></div>
-          <div class="absolute left-1 w-3 h-3 bg-white rounded-full transition-transform peer-checked:translate-x-4 shadow-sm"></div>
+          <div class="w-7 h-4 bg-slate-700 rounded-full peer peer-checked:bg-blue-500 transition-colors shadow-inner"></div>
+          <div class="absolute left-0.5 w-3 h-3 bg-white rounded-full transition-transform peer-checked:translate-x-3 shadow-sm"></div>
         </div>
         <span class="font-bold text-slate-200 group-hover:text-white transition-colors">性別</span>
       </label>
-      <label class="flex items-center gap-1.5 cursor-pointer group">
+      <label class="flex items-center gap-1 cursor-pointer group">
         <div class="relative flex items-center">
           <input type="checkbox" id="pMemChk" class="sr-only peer" onchange="update()">
-          <div class="w-9 h-5 bg-slate-700 rounded-full peer peer-checked:bg-blue-500 transition-colors shadow-inner"></div>
-          <div class="absolute left-1 w-3 h-3 bg-white rounded-full transition-transform peer-checked:translate-x-4 shadow-sm"></div>
+          <div class="w-7 h-4 bg-slate-700 rounded-full peer peer-checked:bg-blue-500 transition-colors shadow-inner"></div>
+          <div class="absolute left-0.5 w-3 h-3 bg-white rounded-full transition-transform peer-checked:translate-x-3 shadow-sm"></div>
         </div>
         <span class="font-bold text-slate-200 group-hover:text-white transition-colors">P会員</span>
       </label>
-      <label class="flex items-center gap-1.5 cursor-pointer group">
+      <label class="flex items-center gap-1 cursor-pointer group">
         <div class="relative flex items-center">
           <input type="checkbox" id="cntChk" class="sr-only peer" checked onchange="update()">
-          <div class="w-9 h-5 bg-slate-700 rounded-full peer peer-checked:bg-emerald-500 transition-colors shadow-inner"></div>
-          <div class="absolute left-1 w-3 h-3 bg-white rounded-full transition-transform peer-checked:translate-x-4 shadow-sm"></div>
+          <div class="w-7 h-4 bg-slate-700 rounded-full peer peer-checked:bg-emerald-500 transition-colors shadow-inner"></div>
+          <div class="absolute left-0.5 w-3 h-3 bg-white rounded-full transition-transform peer-checked:translate-x-3 shadow-sm"></div>
         </div>
         <span class="font-bold text-emerald-400 group-hover:text-emerald-300 transition-colors">人数計</span>
       </label>
-      <label id="evalBox" class="flex items-center gap-1.5 cursor-pointer group">
+      <label id="evalBox" class="flex items-center gap-1 cursor-pointer group">
         <div class="relative flex items-center">
           <input type="checkbox" id="evalExcChk" class="sr-only peer" checked onchange="update()">
-          <div class="w-9 h-5 bg-slate-700 rounded-full peer peer-checked:bg-rose-500 transition-colors shadow-inner"></div>
-          <div class="absolute left-1 w-3 h-3 bg-white rounded-full transition-transform peer-checked:translate-x-4 shadow-sm"></div>
+          <div class="w-7 h-4 bg-slate-700 rounded-full peer peer-checked:bg-rose-500 transition-colors shadow-inner"></div>
+          <div class="absolute left-0.5 w-3 h-3 bg-white rounded-full transition-transform peer-checked:translate-x-3 shadow-sm"></div>
         </div>
         <span class="font-bold text-rose-400 group-hover:text-rose-300 transition-colors">支援含</span>
       </label>
     </div>
-    <div class="flex items-center gap-3 ml-auto">
-      <div class="bg-emerald-600 px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1 shadow-lg">
-        <span>列:</span>
-        <button onclick="changeCol(1)" class="w-5 hover:bg-white/20 rounded font-black pb-0.5">＋</button>
-        <span id="colVal" class="w-5 text-center font-black">15</span>
-        <button onclick="changeCol(-1)" class="w-5 hover:bg-white/20 rounded font-black pb-0.5">－</button>
+    <div class="flex items-center gap-2 ml-auto shrink-0">
+      <div class="bg-emerald-600 px-2 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 shadow-sm text-white">
+        <span class="text-[10px]">列:</span>
+        <button onclick="changeCol(-1)" class="w-4 hover:bg-white/20 rounded font-black leading-none">－</button>
+        <span id="colVal" class="w-4 text-center font-black">15</span>
+        <button onclick="changeCol(1)" class="w-4 hover:bg-white/20 rounded font-black leading-none">＋</button>
       </div>
-      <div class="bg-blue-600 px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1 shadow-lg">
-        <span>行:</span>
-        <button onclick="changeRow(1)" class="w-5 hover:bg-white/20 rounded font-black pb-0.5">＋</button>
+      <div class="bg-blue-600 px-2 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 shadow-sm text-white">
+        <span class="text-[10px]">行:</span>
+        <button onclick="changeRow(-1)" class="w-4 hover:bg-white/20 rounded font-black leading-none">－</button>
         <span id="rowVal" class="w-4 text-center font-black">0</span>
-        <button onclick="changeRow(-1)" class="w-5 hover:bg-white/20 rounded font-black pb-0.5">－</button>
+        <button onclick="changeRow(1)" class="w-4 hover:bg-white/20 rounded font-black leading-none">＋</button>
       </div>
-      <button onclick="window.print()" class="bg-white text-slate-900 px-5 py-2.5 rounded-xl text-sm font-black hover:bg-blue-400 hover:text-white transition-colors shadow-lg ml-1">印刷</button>
+      <button onclick="window.print()" class="bg-white text-slate-900 px-4 py-1.5 rounded-lg text-xs font-black hover:bg-blue-400 hover:text-white transition-colors shadow-sm ml-1">印刷</button>
     </div>
   </div>
   <div class="print-wrapper flex justify-center p-10 print:p-0 print:w-full">
@@ -719,7 +719,7 @@ const renderTopbar = () => {
   state.classIds.forEach(id => {
     const isActive = state.selectedClass === id;
     const activeClass = isActive ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:bg-white/50';
-    html += `<button onclick="updateState('selectedClass', '${id}')" class="px-6 py-2 rounded-xl text-sm font-black transition-all ${activeClass}">${getClassLabel(id)}</button>`;
+    html += `<button onclick="updateState('selectedClass', '${id}')" class="px-4 py-1.5 rounded-lg text-xs font-black transition-all ${activeClass}">${getClassLabel(id)}</button>`;
   });
   html += `</div>`;
 
@@ -728,48 +728,48 @@ const renderTopbar = () => {
     const colsKey = isEval ? 'evalColsPerCategory' : 'normalColsCount';
     
     const createToggle = (id, label, isChecked, onChangeKey, isDisabled = false, activeColor = "peer-checked:bg-blue-600", textColor = "text-slate-600") => `
-      <label class="flex items-center gap-1.5 cursor-pointer group ${isDisabled ? 'opacity-40 cursor-not-allowed' : ''}">
+      <label class="flex items-center gap-1 cursor-pointer group ${isDisabled ? 'opacity-40 cursor-not-allowed' : ''}">
         <div class="relative flex items-center">
           <input type="checkbox" id="${id}" class="sr-only peer" ${isChecked ? 'checked' : ''} ${isDisabled ? 'disabled' : ''} onchange="updateState('${onChangeKey}', this.checked)">
-          <div class="w-9 h-5 bg-slate-300 rounded-full peer ${activeColor} transition-colors shadow-inner"></div>
-          <div class="absolute left-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-4 shadow-sm"></div>
+          <div class="w-7 h-4 bg-slate-300 rounded-full peer ${activeColor} transition-colors shadow-inner"></div>
+          <div class="absolute left-0.5 w-3 h-3 bg-white rounded-full transition-transform peer-checked:translate-x-3 shadow-sm"></div>
         </div>
-        <span class="text-sm font-bold ${textColor} group-hover:text-slate-900 transition-colors">${label}</span>
+        <span class="text-xs font-bold ${textColor} group-hover:text-slate-900 transition-colors">${label}</span>
       </label>
     `;
 
     html += `
-      <div class="flex items-center gap-6">
-        <div class="flex items-center gap-4 border-r border-slate-200 pr-6">
+      <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2 border-r border-slate-200 pr-3">
           ${createToggle('furiChk', 'ふりがな', state.showFurigana, 'showFurigana', isEval)}
           ${createToggle('genChk', '性別', state.showGender, 'showGender')}
           ${createToggle('pMemChk', 'P会員', state.showPMember, 'showPMember', isEval)}
           ${createToggle('cntChk', '人数計', state.showGenderCount, 'showGenderCount', false, "peer-checked:bg-emerald-500", "text-emerald-600")}
         </div>
-        <div class="flex items-center gap-3 font-black">
-          <select onchange="updateState('selectedFont', this.value)" class="text-sm border-2 border-slate-100 rounded-xl px-4 py-2.5 font-black outline-none bg-white shadow-sm text-slate-900 cursor-pointer">
+        <div class="flex items-center gap-2 font-black">
+          <select onchange="updateState('selectedFont', this.value)" class="text-xs border-2 border-slate-100 rounded-lg px-2 py-1.5 font-black outline-none bg-white shadow-sm text-slate-900 cursor-pointer">
             <option value="gothic" ${state.selectedFont === 'gothic' ? 'selected' : ''}>ゴシック</option>
             <option value="mincho" ${state.selectedFont === 'mincho' ? 'selected' : ''}>明朝</option>
             <option value="maru" ${state.selectedFont === 'maru' ? 'selected' : ''}>丸ゴシック</option>
             <option value="kyokasho" ${state.selectedFont === 'kyokasho' ? 'selected' : ''}>教科書体</option>
           </select>
-          <select onchange="updateState('longNameMode', this.value)" class="text-sm border-2 border-slate-100 rounded-xl px-4 py-2.5 font-black outline-none bg-white shadow-sm text-slate-900 cursor-pointer ml-1">
+          <select onchange="updateState('longNameMode', this.value)" class="text-xs border-2 border-slate-100 rounded-lg px-2 py-1.5 font-black outline-none bg-white shadow-sm text-slate-900 cursor-pointer">
             <option value="shrink" ${state.longNameMode === 'shrink' ? 'selected' : ''}>長氏名: 自動縮小</option>
             <option value="wrap" ${state.longNameMode === 'wrap' ? 'selected' : ''}>長氏名: 改行あり</option>
           </select>
-          <div class="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-xl shadow-lg font-bold ml-2">
-            <span class="text-[11px] font-black uppercase">列:</span>
-            <button onclick="changeSettingNumber('${colsKey}', 1)" class="w-6 text-lg hover:bg-white/20 rounded font-black pb-0.5">＋</button>
-            <span class="text-sm w-6 text-center font-black">${colsCount}</span>
-            <button onclick="changeSettingNumber('${colsKey}', -1)" class="w-6 text-lg hover:bg-white/20 rounded font-black pb-0.5">－</button>
+          <div class="flex items-center gap-1 bg-emerald-600 text-white px-2 py-1.5 rounded-lg shadow-sm font-bold">
+            <span class="text-[10px] font-black">列:</span>
+            <button onclick="changeSettingNumber('${colsKey}', -1)" class="w-5 hover:bg-white/20 rounded font-black leading-none">－</button>
+            <span class="text-xs w-4 text-center font-black">${colsCount}</span>
+            <button onclick="changeSettingNumber('${colsKey}', 1)" class="w-5 hover:bg-white/20 rounded font-black leading-none">＋</button>
           </div>
-          <div class="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl shadow-lg font-bold">
-            <span class="text-[11px] font-black uppercase">行:</span>
-            <button onclick="changeSettingNumber('bottomRowCount', 1)" class="w-6 text-lg hover:bg-white/20 rounded font-black pb-0.5">＋</button>
-            <span class="text-sm w-5 text-center font-black">${state.bottomRowCount}</span>
-            <button onclick="changeSettingNumber('bottomRowCount', -1)" class="w-6 text-lg hover:bg-white/20 rounded font-black pb-0.5">－</button>
+          <div class="flex items-center gap-1 bg-blue-600 text-white px-2 py-1.5 rounded-lg shadow-sm font-bold">
+            <span class="text-[10px] font-black">行:</span>
+            <button onclick="changeSettingNumber('bottomRowCount', -1)" class="w-5 hover:bg-white/20 rounded font-black leading-none">－</button>
+            <span class="text-xs w-4 text-center font-black">${state.bottomRowCount}</span>
+            <button onclick="changeSettingNumber('bottomRowCount', 1)" class="w-5 hover:bg-white/20 rounded font-black leading-none">＋</button>
           </div>
-          <button onclick="window.print()" class="flex items-center gap-3 bg-slate-900 text-white px-8 py-3 rounded-xl text-sm font-black hover:bg-black transition-all shadow-xl font-bold ml-2"><i data-lucide="printer" class="w-5 h-5"></i> 印刷</button>
+          <button onclick="window.print()" class="flex items-center gap-1 bg-slate-900 text-white px-4 py-1.5 rounded-lg text-xs font-black hover:bg-black transition-all shadow-sm shrink-0"><i data-lucide="printer" class="w-4 h-4"></i> 印刷</button>
         </div>
       </div>
     `;
