@@ -10,10 +10,10 @@
   @media print { 
     @page { size: A4 portrait; margin: 15mm 10mm 15mm 20mm; } 
     html, body, .print-wrapper, main { 
-      width: 100% !important; margin: 0 !important; padding: 0 !important; display: block !important; background: white !important; height: auto !important; overflow: visible !important; 
+      width: 100% !important; margin: 0 !important; padding: 0 !important; background: white !important; overflow: visible !important; 
     } 
-    #canvas { 
-      display: block !important; width: 100% !important; margin: 0 !important; padding: 0 !important; max-width: none !important; border: none !important; box-shadow: none !important; height: auto !important; transform: none !important; 
+    #canvas, #print-area { 
+      display: flex !important; flex-direction: column !important; width: 100% !important; margin: 0 !important; padding: 0 !important; max-width: none !important; border: none !important; box-shadow: none !important; height: 267mm !important; transform: none !important; 
     }
     .print\:hidden, aside, #topbar { display: none !important; } 
   }
