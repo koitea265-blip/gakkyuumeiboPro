@@ -9,12 +9,14 @@
 <style>
   @media print { 
     @page { size: A4 portrait; margin: 15mm 10mm 15mm 20mm; } 
-    body, main, #content { 
+    html, body, main, #content { 
+      width: 100% !important; margin: 0 !important; padding: 0 !important; display: block !important; background: white !important;
       height: auto !important; 
       overflow: visible !important; 
-      background: white !important; 
     }
-    #content { padding: 0 !important; }
+    #print-container, #print-area {
+      display: block !important; width: 100% !important; margin: 0 !important; padding: 0 !important; max-width: none !important; border: none !important; box-shadow: none !important; height: auto !important; transform: none !important;
+    }
     .print\:hidden { display: none !important; }
   } 
   .animate-fade-in { animation: fade-in 0.3s ease-out forwards; } 
@@ -374,9 +376,13 @@ window.handleExportHTML = () => {
 <style>
   @media print { 
     @page { size: A4 portrait; margin: 15mm 10mm 15mm 20mm; } 
-    body, html, .print-wrapper { height: auto !important; overflow: visible !important; background: white !important; } 
-    .print\\:hidden { display: none !important; } 
-    #canvas { padding: 0 !important; box-shadow: none !important; border: none !important; margin: 0 !important; width: 100% !important; }
+    html, body, .print-wrapper { 
+      width: 100% !important; margin: 0 !important; padding: 0 !important; display: block !important; background: white !important; height: auto !important; overflow: visible !important; 
+    } 
+    #canvas { 
+      display: block !important; width: 100% !important; margin: 0 !important; padding: 0 !important; max-width: none !important; border: none !important; box-shadow: none !important; height: auto !important; transform: none !important; 
+    }
+    .print\:hidden { display: none !important; } 
   }
   table { width: 100%; border-collapse: collapse; table-layout: fixed; border: 2.5px solid #000 !important; height: 100%; }
   table th, table td { vertical-align: middle !important; }
@@ -466,7 +472,7 @@ window.handleExportHTML = () => {
     </div>
   </div>
   <div class="print-wrapper flex justify-center p-10 print:p-0 print:w-full">
-    <div id="canvas" class="bg-white pt-[15mm] pb-[15mm] pl-[20mm] pr-[10mm] print:p-0 print:border-none print:shadow-none print:w-full print:h-[266mm] print:m-0 border border-slate-300 shadow-2xl w-[210mm] h-[297mm] flex flex-col shrink-0 text-slate-900"></div>
+    <div id="canvas" class="bg-white pt-[15mm] pb-[15mm] pl-[20mm] pr-[10mm] border border-slate-300 shadow-2xl w-[210mm] h-[297mm] flex flex-col shrink-0 text-slate-900"></div>
   </div>
 <script>
   const D = ${JSON.stringify(appData)};
@@ -592,8 +598,8 @@ window.handleExportHTML = () => {
             if (longNameMode === 'wrap' && v.length >= 9) {
               let l1 = v.substring(0, 8);
               let l2 = v.substring(8);
-              v = '<div style="display:inline-block; text-align:left; line-height:1.05; vertical-align:middle; margin:-0.2em 0; letter-spacing:0;">' + l1 + '<br/>' + l2 + '</div>';
-              fs = getNameFontSize("123456789", fontK);
+              v = '<div style="display:inline-block; text-align:left; line-height:1.05; margin:-0.2em 0;">' + l1 + '<br/>' + l2 + '</div>';
+              fs = getNameFontSize("12345678", fontK);
               pad = "0";
               ws = 'normal'; align = 'center'; alignLast = 'auto';
             } else {
@@ -604,8 +610,8 @@ window.handleExportHTML = () => {
             if (longNameMode === 'wrap' && v.length >= 11) {
               let l1 = v.substring(0, 10);
               let l2 = v.substring(10);
-              v = '<div style="display:inline-block; text-align:left; line-height:1.05; vertical-align:middle; margin:-0.2em 0; letter-spacing:0;">' + l1 + '<br/>' + l2 + '</div>';
-              fs = getKanaFontSize("12345678901");
+              v = '<div style="display:inline-block; text-align:left; line-height:1.05; margin:-0.2em 0;">' + l1 + '<br/>' + l2 + '</div>';
+              fs = getKanaFontSize("1234567890", fontK);
               pad = "0";
               ws = 'normal'; align = 'center'; alignLast = 'auto';
             } else {
@@ -944,11 +950,10 @@ const renderPrintView = () => {
         if (state.longNameMode === 'wrap' && val.length >= 9) {
           let l1 = val.substring(0, 8);
           let l2 = val.substring(8);
-          v = '<div style="display:inline-block; text-align:left; line-height:1.05; vertical-align:middle; margin:-0.2em 0; letter-spacing:0;">' + l1 + '<br/>' + l2 + '</div>';
-          fs = getNameFontSize("123456789", state.selectedFont);
+          val = `<div style="display:inline-block; text-align:left; line-height:1.05; margin:-0.2em 0;">${l1}<br/>${l2}</div>`;
+          fs = getNameFontSize("12345678", state.selectedFont);
           pad = "0";
           ws = 'normal'; align = 'center'; alignLast = 'auto';
-          val = v; // fix assignment
         } else {
           fs = getNameFontSize(val, state.selectedFont);
           pad = getNamePadding(val);
@@ -957,11 +962,10 @@ const renderPrintView = () => {
         if (state.longNameMode === 'wrap' && val.length >= 11) {
           let l1 = val.substring(0, 10);
           let l2 = val.substring(10);
-          v = '<div style="display:inline-block; text-align:left; line-height:1.05; vertical-align:middle; margin:-0.2em 0; letter-spacing:0;">' + l1 + '<br/>' + l2 + '</div>';
-          fs = getKanaFontSize("12345678901");
+          val = `<div style="display:inline-block; text-align:left; line-height:1.05; margin:-0.2em 0;">${l1}<br/>${l2}</div>`;
+          fs = getKanaFontSize("1234567890");
           pad = "0";
           ws = 'normal'; align = 'center'; alignLast = 'auto';
-          val = v; // fix assignment
         } else {
           fs = getKanaFontSize(val);
           pad = getKanaPadding(val);
