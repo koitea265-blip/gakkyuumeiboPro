@@ -428,9 +428,9 @@ function generateTableHTML(D, selC, type, fontK) {
             if (longNameMode === 'wrap' && val.length >= 9) {
               let l1 = val.substring(0, 8);
               let l2 = val.substring(8);
-              // ブロック要素の呪縛を断ち切るため、inline-block + vertical-align:middle をコンテナに付与。
-              // さらに transform を使用して、その基準点（セルのど真ん中）から自らの半分だけ押し上げることで、完璧な中央スナップを実現。
-              val = `<div style="display:inline-block; vertical-align:middle; height:0; width:100%; position:relative;"><div style="position:absolute; top:0; left:50%; transform:translate(-50%, -50%); text-align:left; line-height:1.1; white-space:nowrap;">${l1}<br/>${l2}</div></div>`;
+              // ブロック化・絶対配置を全廃。インラインブロックでベースライン計算に完全同調させつつ、
+              // マイナスマージンで物理高さを削り取り、行高の膨張のみを無効化する。
+              val = `<span style="display:inline-block; vertical-align:middle; margin:-15px 0; text-align:left; line-height:1.05; white-space:nowrap;">${l1}<br/>${l2}</span>`;
               fs = "9.5px";
               pad = "0";
               ws = 'normal'; align = 'center'; alignLast = 'auto';
@@ -442,8 +442,9 @@ function generateTableHTML(D, selC, type, fontK) {
             if (longNameMode === 'wrap' && val.length >= 11) {
               let l1 = val.substring(0, 10);
               let l2 = val.substring(10);
-              val = `<div style="display:inline-block; vertical-align:middle; height:0; width:100%; position:relative;"><div style="position:absolute; top:0; left:50%; transform:translate(-50%, -50%); text-align:left; line-height:1.1; white-space:nowrap; margin-top:1px;">${l1}<br/>${l2}</div></div>`;
-              fs = "9px";
+              // ひらがなは重心補正のために padding-top: 1px のみ付与
+              val = `<span style="display:inline-block; vertical-align:middle; margin:-15px 0; text-align:left; line-height:1.05; white-space:nowrap; padding-top:1px;">${l1}<br/>${l2}</span>`;
+              fs = "8.5px";
               pad = "0";
               ws = 'normal'; align = 'center'; alignLast = 'auto';
             } else {
