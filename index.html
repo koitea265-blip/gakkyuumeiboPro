@@ -428,9 +428,9 @@ function generateTableHTML(D, selC, type, fontK) {
             if (longNameMode === 'wrap' && val.length >= 9) {
               let l1 = val.substring(0, 8);
               let l2 = val.substring(8);
-              val = `<div style="display:inline-flex; align-items:center; justify-content:center; height:12px; vertical-align:middle;">
-                       <div style="text-align:left; line-height:1.05; white-space:nowrap; margin-top:-1.5px;">${l1}<br/>${l2}</div>
-                     </div>`;
+              // ブロック要素の呪縛を断ち切るため、inline-block + vertical-align:middle をコンテナに付与。
+              // さらに transform を使用して、その基準点（セルのど真ん中）から自らの半分だけ押し上げることで、完璧な中央スナップを実現。
+              val = `<div style="display:inline-block; vertical-align:middle; height:0; width:100%; position:relative;"><div style="position:absolute; top:0; left:50%; transform:translate(-50%, -50%); text-align:left; line-height:1.1; white-space:nowrap;">${l1}<br/>${l2}</div></div>`;
               fs = "9.5px";
               pad = "0";
               ws = 'normal'; align = 'center'; alignLast = 'auto';
@@ -442,10 +442,8 @@ function generateTableHTML(D, selC, type, fontK) {
             if (longNameMode === 'wrap' && val.length >= 11) {
               let l1 = val.substring(0, 10);
               let l2 = val.substring(10);
-              val = `<div style="display:inline-flex; align-items:center; justify-content:center; height:12px; vertical-align:middle;">
-                       <div style="text-align:left; line-height:1.05; white-space:nowrap; margin-top:-0.5px;">${l1}<br/>${l2}</div>
-                     </div>`;
-              fs = "8.5px";
+              val = `<div style="display:inline-block; vertical-align:middle; height:0; width:100%; position:relative;"><div style="position:absolute; top:0; left:50%; transform:translate(-50%, -50%); text-align:left; line-height:1.1; white-space:nowrap; margin-top:1px;">${l1}<br/>${l2}</div></div>`;
+              fs = "9px";
               pad = "0";
               ws = 'normal'; align = 'center'; alignLast = 'auto';
             } else {
@@ -493,7 +491,7 @@ window.handleExportHTML = () => {
       width: 100% !important; margin: 0 !important; padding: 0 !important; display: block !important; background: white !important; height: auto !important; overflow: visible !important; 
     } 
     #canvas { 
-      display: block !important; width: 100% !important; margin: 0 !important; padding: 0 !important; max-width: none !important; border: none !important; box-shadow: none !important; height: auto !important; transform: none !important; 
+      display: flex !important; flex-direction: column !important; width: 100% !important; margin: 0 !important; padding: 0 !important; max-width: none !important; border: none !important; box-shadow: none !important; height: 266mm !important; transform: none !important; 
     }
     .print\\\\:hidden { display: none !important; } 
   }
