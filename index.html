@@ -22,7 +22,7 @@
   .cell-border { border: 1px solid #000; }
   .thick-right { border-right: 2.5px solid #000 !important; }
   .thick-left { border-left: 2.5px solid #000 !important; }
-  tbody tr { height: 1px; }
+  tbody tr { height: 1%; }
   .justify-style { text-align: justify; text-align-last: justify; text-justify: inter-character; }
   ::-webkit-scrollbar { width: 10px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -428,9 +428,11 @@ function generateTableHTML(D, selC, type, fontK) {
             if (longNameMode === 'wrap' && val.length >= 9) {
               let l1 = val.substring(0, 8);
               let l2 = val.substring(8);
-              // ブロック化・絶対配置を全廃。インラインブロックでベースライン計算に完全同調させつつ、
-              // マイナスマージンで物理高さを削り取り、行高の膨張のみを無効化する。
-              val = `<span style="display:inline-block; vertical-align:middle; margin:-15px 0; text-align:left; line-height:1.05; white-space:nowrap;">${l1}<br/>${l2}</span>`;
+              // マイナスマージンや絶対配置を一切使用せず、物理高さを14pxに完全固定。
+              // この14pxという高さは、1行テキストが占有する高さと等しいため、ブラウザは全行を同等と見なし均等配分する。
+              val = `<div style="height:14px; display:flex; align-items:center; justify-content:center;">
+                       <div style="text-align:left; line-height:1.05; white-space:nowrap;">${l1}<br/>${l2}</div>
+                     </div>`;
               fs = "9.5px";
               pad = "0";
               ws = 'normal'; align = 'center'; alignLast = 'auto';
@@ -442,8 +444,10 @@ function generateTableHTML(D, selC, type, fontK) {
             if (longNameMode === 'wrap' && val.length >= 11) {
               let l1 = val.substring(0, 10);
               let l2 = val.substring(10);
-              // ひらがなは重心補正のために padding-top: 1px のみ付与
-              val = `<span style="display:inline-block; vertical-align:middle; margin:-15px 0; text-align:left; line-height:1.05; white-space:nowrap; padding-top:1px;">${l1}<br/>${l2}</span>`;
+              // 同じく高さを14pxに固定。
+              val = `<div style="height:14px; display:flex; align-items:center; justify-content:center;">
+                       <div style="text-align:left; line-height:1.05; white-space:nowrap; padding-top:1px;">${l1}<br/>${l2}</div>
+                     </div>`;
               fs = "8.5px";
               pad = "0";
               ws = 'normal'; align = 'center'; alignLast = 'auto';
@@ -501,7 +505,7 @@ window.handleExportHTML = () => {
   .cell-border { border: 1px solid #000; }
   .thick-right { border-right: 2.5px solid #000 !important; }
   .thick-left { border-left: 2.5px solid #000 !important; }
-  tbody tr { height: 1px; }
+  tbody tr { height: 1%; }
   .justify-style { text-align: justify; text-align-last: justify; text-justify: inter-character; }
   .gender-style { text-align: center; white-space: nowrap; font-size: 11px; padding: 0 !important; }
   .text-center { text-align: center; }
