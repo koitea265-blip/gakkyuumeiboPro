@@ -9,14 +9,12 @@
 <style>
   @media print { 
     @page { size: A4 portrait; margin: 15mm 10mm 15mm 20mm; } 
-    html, body, main, #content { 
-      width: 100% !important; margin: 0 !important; padding: 0 !important; display: block !important; background: white !important;
+    body, main, #content { 
       height: auto !important; 
       overflow: visible !important; 
+      background: white !important; 
     }
-    #print-container, #print-area {
-      display: block !important; width: 100% !important; margin: 0 !important; padding: 0 !important; max-width: none !important; border: none !important; box-shadow: none !important; height: auto !important; transform: none !important;
-    }
+    #content { padding: 0 !important; }
     .print\:hidden { display: none !important; }
   } 
   .animate-fade-in { animation: fade-in 0.3s ease-out forwards; } 
@@ -556,14 +554,24 @@ window.handleExportHTML = () => {
     
     const finalStudents = (type === 'evaluation' && !document.getElementById('evalExcChk').checked) ? students.filter(s => !s.special) : students;
     
-    let h = '<div style="display:flex; justify-content:space-between; align-items:flex-end; font-weight:bold; font-size:12px; margin-bottom:8px;">';
-    h += '<div>' + D.schoolName + ' ' + D.grade + '年' + (D.classFormat==='alphabetic'?toAlpha(selC):selC) + '組';
+    let h = '<div style="display:flex; justify-content:space-between; align-items:flex-end; font-weight:bold; font-size:12px; margin-bottom:4px;">';
+    h += '<div><div style="display:flex; align-items:baseline; gap:16px;">';
+    h += '<span style="letter-spacing:0.1em;">' + D.schoolName + '</span>';
+    h += '<span>' + D.grade + '年' + (D.classFormat==='alphabetic'?toAlpha(selC):selC) + '組</span>';
     if(showCnt) {
        const m = finalStudents.filter(s=>s.gender==='男').length;
        const w = finalStudents.filter(s=>s.gender==='女').length;
-       h += '<span style="margin-left:1.5em; color:#64748b">男 ' + m + ' 女 ' + w + ' 計 ' + finalStudents.length + '名</span>';
+       h += '<span style="margin-left:16px; color:#64748b">男 ' + m + ' 女 ' + w + ' 計 ' + finalStudents.length + '名</span>';
     }
-    h += '</div><div>担任 <span style="display:inline-block; width:120px; border-bottom:1px solid #000; text-align:center">' + (D.teachers[selC] || '') + '</span></div></div>';
+    h += '</div>';
+    if(type === 'evaluation') {
+      h += '<div style="margin-top:8px; display:flex; gap:32px; color:#1e293b;">';
+      h += '<span>教科【<span style="display:inline-block; width:96px; border-bottom:1px solid #000;"></span>】</span>';
+      h += '<span>単元【<span style="display:inline-block; width:192px; border-bottom:1px solid #000;"></span>】</span>';
+      h += '</div>';
+    }
+    h += '</div><div style="display:flex; align-items:flex-end; gap:8px;">';
+    h += '<span>担任</span><span style="display:inline-block; width:112px; border-bottom:1px solid #000; text-align:center; padding-bottom:2px;">' + (D.teachers[selC] || '') + '</span></div></div>';
     
     h += '<div class="flex-1 mt-2 min-h-0 pr-[2px] pb-[2px] overflow-visible">';
 
@@ -599,7 +607,7 @@ window.handleExportHTML = () => {
               let l1 = v.substring(0, 8);
               let l2 = v.substring(8);
               v = '<div style="display:inline-block; text-align:left; line-height:1.05; margin:-0.2em 0;">' + l1 + '<br/>' + l2 + '</div>';
-              fs = getNameFontSize("12345678", fontK);
+              fs = getNameFontSize("123456789", fontK);
               pad = "0";
               ws = 'normal'; align = 'center'; alignLast = 'auto';
             } else {
@@ -611,7 +619,7 @@ window.handleExportHTML = () => {
               let l1 = v.substring(0, 10);
               let l2 = v.substring(10);
               v = '<div style="display:inline-block; text-align:left; line-height:1.05; margin:-0.2em 0;">' + l1 + '<br/>' + l2 + '</div>';
-              fs = getKanaFontSize("1234567890", fontK);
+              fs = getKanaFontSize("12345678901");
               pad = "0";
               ws = 'normal'; align = 'center'; alignLast = 'auto';
             } else {
@@ -951,7 +959,7 @@ const renderPrintView = () => {
           let l1 = val.substring(0, 8);
           let l2 = val.substring(8);
           val = `<div style="display:inline-block; text-align:left; line-height:1.05; margin:-0.2em 0;">${l1}<br/>${l2}</div>`;
-          fs = getNameFontSize("12345678", state.selectedFont);
+          fs = getNameFontSize("123456789", state.selectedFont);
           pad = "0";
           ws = 'normal'; align = 'center'; alignLast = 'auto';
         } else {
@@ -963,7 +971,7 @@ const renderPrintView = () => {
           let l1 = val.substring(0, 10);
           let l2 = val.substring(10);
           val = `<div style="display:inline-block; text-align:left; line-height:1.05; margin:-0.2em 0;">${l1}<br/>${l2}</div>`;
-          fs = getKanaFontSize("1234567890");
+          fs = getKanaFontSize("12345678901");
           pad = "0";
           ws = 'normal'; align = 'center'; alignLast = 'auto';
         } else {
