@@ -10,10 +10,10 @@
   @media print { 
     @page { size: A4 portrait; margin: 15mm 10mm 15mm 20mm; } 
     html, body, .print-wrapper, main { 
-      width: 100% !important; margin: 0 !important; padding: 0 !important; background: white !important; overflow: visible !important; 
+      width: 100% !important; margin: 0 !important; padding: 0 !important; display: block !important; background: white !important; height: auto !important; overflow: visible !important; 
     } 
     #canvas, #print-area { 
-      display: flex !important; flex-direction: column !important; width: 100% !important; margin: 0 !important; padding: 0 !important; max-width: none !important; border: none !important; box-shadow: none !important; height: 267mm !important; transform: none !important; 
+      display: block !important; width: 100% !important; margin: 0 !important; padding: 0 !important; max-width: none !important; border: none !important; box-shadow: none !important; height: auto !important; transform: none !important; 
     }
     .print\:hidden, aside, #topbar { display: none !important; } 
   }
@@ -24,12 +24,10 @@
   .thick-left { border-left: 2.5px solid #000 !important; }
   tbody tr { height: 1px; }
   .justify-style { text-align: justify; text-align-last: justify; text-justify: inter-character; }
-  ::-webkit-scrollbar { width: 10px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 20px; border: 3px solid #f0f4f9; }
-  ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-  .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-  .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+  .gender-style { text-align: center; white-space: nowrap; font-size: 11px; padding: 0 !important; }
+  .text-center { text-align: center; }
+  select { color: #000 !important; font-weight: bold; cursor: pointer; }
+  button { cursor: pointer; }
 </style>
 </head>
 <body class="flex h-screen bg-[#eaeff5] font-sans text-slate-800 overflow-hidden font-bold relative">
@@ -242,6 +240,8 @@ const loadFromLocalStorage = () => {
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
+      // 起動時は必ず初期タブにするため activeTab の復元を破棄
+      delete parsed.activeTab;
       state = { ...state, ...parsed }; 
     } catch (e) {
       console.error('Failed to parse local storage data', e);
@@ -426,10 +426,12 @@ function generateTableHTML(D, selC, type, fontK) {
             if (longNameMode === 'wrap' && val.length >= 9) {
               let l1 = val.substring(0, 8);
               let l2 = val.substring(8);
-              // ハックを排除し、純粋な改行（<br/>）のみを使用する
-              val = `${l1}<br/>${l2}`;
+              // ブロックレベルのflexコンテナでベースライン依存を切り離し、絶対的な垂直中央を確立
+              val = `<div style="display:flex; align-items:center; justify-content:center; height:14px;">
+                       <div style="text-align:left; line-height:1.05; white-space:nowrap; margin-top:1px;">${l1}<br/>${l2}</div>
+                     </div>`;
               fs = "9.5px";
-              pad = "0 0.2em";
+              pad = "0";
               ws = 'normal'; align = 'center'; alignLast = 'auto';
             } else {
               fs = getNameFontSize(val, fontK);
@@ -439,9 +441,12 @@ function generateTableHTML(D, selC, type, fontK) {
             if (longNameMode === 'wrap' && val.length >= 11) {
               let l1 = val.substring(0, 10);
               let l2 = val.substring(10);
-              val = `${l1}<br/>${l2}`;
-              fs = "9px";
-              pad = "0 0.2em";
+              // 同様にブロックレベルflexで中央配置を強制
+              val = `<div style="display:flex; align-items:center; justify-content:center; height:14px;">
+                       <div style="text-align:left; line-height:1.05; white-space:nowrap; margin-top:1px;">${l1}<br/>${l2}</div>
+                     </div>`;
+              fs = "8.5px";
+              pad = "0";
               ws = 'normal'; align = 'center'; alignLast = 'auto';
             } else {
               fs = getKanaFontSize(val);
@@ -449,8 +454,7 @@ function generateTableHTML(D, selC, type, fontK) {
             }
           }
         }
-        let extraStyle = ws === 'normal' ? 'line-height:1.15;' : 'line-height:1;';
-        h += `<td class="cell-border ${c.s&&ws==='nowrap'?'justify-style':''} ${i===bc.length-1?'thick-right':''}" style="font-size:${fs}; padding:${pad}; white-space:${ws}; text-align:${align}; text-align-last:${alignLast}; ${extraStyle}">${val}</td>`;
+        h += `<td class="cell-border ${c.s&&ws==='nowrap'?'justify-style':''} ${i===bc.length-1?'thick-right':''}" style="font-size:${fs}; padding:${pad}; white-space:${ws}; text-align:${align}; text-align-last:${alignLast};">${val}</td>`;
       });
       for(let i=0; i<ic; i++) h += `<td class="cell-border ${(i+1)%step===0 || (i+1)===ic?'thick-right':''}"></td>`;
       h += '</tr>';
