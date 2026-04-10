@@ -266,16 +266,29 @@ const getClassLabel = (id) => escapeHTML(state.classFormat === 'alphabetic' ? `$
 
 const getMasterStudents = () => {
   if (!state.tsvData) return [];
-  const lines = state.tsvData.trim().split('\n');
-  return lines.slice(1).map(line => {
+  const lines = state.tsvData.trim().split(/\r\n|\n|\r/);
+  const startIndex = (lines.length > 0 && /(氏名|ふりがな|組|名前|性別)/.test(lines[0])) ? 1 : 0;
+
+  const toHalfWidth = (str) => {
+    if (!str) return '';
+    return String(str).replace(/[Ａ-Ｚａ-ｚ０-９]/g, function(s) {
+      return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
+    });
+  };
+
+  return lines.slice(startIndex).map(line => {
     const parts = line.split('\t').map(p => p.trim().replace(/^"|"$/g, '').replace(/ /g, '\u3000'));
     if (parts.length < 5) return null;
-    const [c, id, name, kana, gen] = parts;
-    const norm = isNaN(c) ? String(c).toUpperCase().charCodeAt(0) - 64 : String(c);
+    
+    let c_norm = toHalfWidth(parts[0]).replace(/[^0-9A-Za-z]/g, '').toUpperCase();
+    let norm = isNaN(c_norm) ? String(c_norm.charCodeAt(0) - 64) : String(c_norm);
+    let id_norm = toHalfWidth(parts[1]).replace(/[^0-9]/g, '');
+
     if (String(norm) !== String(state.selectedClass)) return null;
-    const key = `${state.selectedClass}_${id}`;
+    
+    const key = `${state.selectedClass}_${id_norm}`;
     const info = state.additionalData[key] || {};
-    return { id, name, kana, gender: gen, special: !!info.specialSupport, pMember: !!info.pMember, key };
+    return { id: id_norm, name: parts[2], kana: parts[3], gender: parts[4], special: !!info.specialSupport, pMember: !!info.pMember, key };
   }).filter(s => s !== null);
 };
 
@@ -374,12 +387,27 @@ function generateTableHTML(D, selC, type, fontK, escFn) {
     const normalCols = D.normalColsCount;
     const rowCount = D.bottomRowCount;
 
-    const students = D.tsvData.trim().split('\n').slice(1).map(l => {
+    const toHalfWidth = (str) => {
+      if (!str) return '';
+      return String(str).replace(/[Ａ-Ｚａ-ｚ０-９]/g, function(s) {
+        return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
+      });
+    };
+
+    const lines = (D.tsvData || "").trim().split(/\r\n|\n|\r/);
+    const startIndex = (lines.length > 0 && /(氏名|ふりがな|組|名前|性別)/.test(lines[0])) ? 1 : 0;
+
+    const students = lines.slice(startIndex).map(l => {
       const p = l.split('\t').map(x => x.trim().replace(/^"|"$/g, '').replace(/ /g, '\u3000'));
       if (p.length < 5) return null;
-      const norm = isNaN(p[0]) ? String(p[0]).toUpperCase().charCodeAt(0) - 64 : String(p[0]);
+      
+      let c_norm = toHalfWidth(p[0]).replace(/[^0-9A-Za-z]/g, '').toUpperCase();
+      let norm = isNaN(c_norm) ? String(c_norm.charCodeAt(0) - 64) : String(c_norm);
+      let id_norm = toHalfWidth(p[1]).replace(/[^0-9]/g, '');
+
       if (String(norm) !== String(selC)) return null;
-      return { id: p[1], name: p[2], kana: p[3], gender: p[4], special: !!(D.additionalData[selC + '_' + p[1]] || {}).specialSupport };
+      
+      return { id: id_norm, name: p[2], kana: p[3], gender: p[4], special: !!(D.additionalData[selC + '_' + id_norm] || {}).specialSupport };
     }).filter(s => s && (type === 'exchange' || type === 'evaluation' || (type === 'no_exchange' && !s.special)));
     
     const finalStudents = (type === 'evaluation' && !D.options.evalShowExchange) ? students.filter(s => !s.special) : students;
